@@ -18,6 +18,7 @@
 
     <xacro:include filename="$(find kinova_description)/urdf/kinova_common.xacro" />
     <xacro:include filename="$(find kinova_description)/urdf/kinova_finger_set.xacro" />
+    <xacro:include filename="$(find robotiq_85_description)/urdf/robotiq_85_gripper.urdf.xacro" />
 
     <!-- Import all Gazebo-customization elements -->
     <xacro:include filename="$(find kinova_description)/urdf/kinova.gazebo" />
@@ -140,6 +141,7 @@
         <xacro:kinova_armlink link_name="${prefix}_link_6" link_mesh="${link_6_mesh}" use_ring_mesh="true" ring_mesh="ring_small" mesh_no="${link_6_mesh_no}"/>
         <xacro:kinova_armjoint joint_name="${prefix}_joint_6" type="${joint_6_type}" parent="${prefix}_link_5" child="${prefix}_link_6" joint_axis_xyz="${joint_6_axis_xyz}" joint_origin_xyz="${joint_6_origin_xyz}" joint_origin_rpy="${joint_6_origin_rpy}" joint_lower_limit="${joint_6_lower_limit}" joint_upper_limit="${joint_6_upper_limit}"/>
 
+        <!--
         <xacro:kinova_armlink link_name="${prefix}_link_7" link_mesh="${link_7_mesh}" use_ring_mesh="true" ring_mesh="ring_small" mesh_no="${link_7_mesh_no}"/>
         <xacro:kinova_armjoint joint_name="${prefix}_joint_7" type="${joint_7_type}" parent="${prefix}_link_6" child="${prefix}_link_7" joint_axis_xyz="${joint_7_axis_xyz}" joint_origin_xyz="${joint_7_origin_xyz}" joint_origin_rpy="${joint_7_origin_rpy}" joint_lower_limit="${joint_7_lower_limit}" joint_upper_limit="${joint_7_upper_limit}"/>    
 
@@ -147,6 +149,63 @@
         <xacro:kinova_virtual_joint joint_name="${prefix}_joint_end_effector" type="${joint_end_effector_type}" parent="${prefix}_link_7" child="${prefix}_end_effector" joint_axis_xyz="${joint_end_effector_axis_xyz}" joint_origin_xyz="${joint_end_effector_origin_xyz}" joint_origin_rpy="${joint_end_effector_origin_rpy}" joint_lower_limit="0" joint_upper_limit="0"/>    
 
         <xacro:kinova_3fingers link_hand="${prefix}_link_7" prefix="${prefix}_"/>
+        -->
+
+        <!-- RAIL end-effector additions/modifications -->
+
+        <joint name="${prefix}_joint_7" type="continuous">
+          <parent link="${prefix}_link_6" />
+          <child link = "${prefix}_link_7" />
+          <origin xyz="0 0.06075 0" rpy="${J_PI/2} 0 0" />
+          <axis xyz="0 0 1" />
+          <limit effort="600.8" velocity="0.785"/>
+          <dynamics damping="0.0" friction="0.0"/>
+        </joint>
+
+
+        <link name="${prefix}_link_7">
+          <visual>
+            <geometry>
+              <mesh filename="package://kinova_description/meshes/wrist_3.dae"/>
+            </geometry>
+          </visual>
+          <collision>
+            <geometry>
+              <mesh filename="package://kinova_description/meshes/wrist_3.stl"/>
+            </geometry>
+          </collision>
+        </link>
+
+        <joint name="${prefix}_ee_fixed_joint" type="fixed">
+          <parent link="${prefix}_link_7" />
+          <child link = "${prefix}_ee_base" />
+          <origin xyz="0 0 -0.09380704" rpy="0 ${J_PI/2} 0" />
+        </joint>
+
+        <link name="${prefix}_ee_base"/>
+
+        <joint name="${prefix}_ee_gripper" type="fixed">
+          <parent link="${prefix}_ee_base" />
+          <child link ="${prefix}_ee_link" />
+          <origin xyz="0.13 0 0" />
+        </joint>
+
+        <link name="${prefix}_ee_link"/>
+
+        <transmission name="${prefix}_joint_7_trans">
+          <type>transmission_interface/SimpleTransmission</type>
+          <joint name="${prefix}_joint_7">
+            <hardwareInterface>PositionJointInterface</hardwareInterface>
+          </joint>
+          <actuator name="${prefix}_joint_7_motor">
+            <mechanicalReduction>1</mechanicalReduction>
+          </actuator>
+        </transmission>
+
+        <xacro:robotiq_85_gripper prefix="${prefix}_" parent="${prefix}_ee_base">
+          <origin xyz="0 0 0" rpy="0 0 0" />
+        </xacro:robotiq_85_gripper>
+
     </xacro:macro>
 
     
