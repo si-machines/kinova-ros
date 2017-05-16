@@ -853,6 +853,7 @@ void KinovaComm::setRobotCOMParam(GRAVITY_TYPE type,std::vector<float> params)
     float com_parameters[GRAVITY_PARAM_SIZE];
     memset(&com_parameters, 0, sizeof(com_parameters));
     std::ostringstream com_params;
+	// std::cout << "ffff:" << com_params << std::endl;
     com_params<<"Setting COM parameters to ";
     for (int i=0; i<params.size(); i++)
     {

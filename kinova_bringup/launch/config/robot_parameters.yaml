@@ -8,13 +8,13 @@ jointSpeedLimitParameter1: 10
 jointSpeedLimitParameter2: 20
 
 # payload: [COM COMx COMy COMz]
-#payload: [0, 0, 0, 0]
+payload: [0.45, 0, 0, 0]
 
 connection_type: USB #Ethernet
 
 # Ethernet connection parameters
 ethernet: {
-  local_machine_IP: 192.168.100.100,
+  local_machine_IP: 143.215.128.118,
   subnet_mask: 255.255.255.0,
   local_cmd_port: 25000,
   local_broadcast_port: 25025
@@ -24,7 +24,7 @@ ethernet: {
 #Do not change these parameters unless you want to change torque control behavior
 torque_parameters: {
       publish_torque_with_gravity_compensation: false,
-      use_estimated_COM_parameters: false,
+      use_estimated_COM_parameters: true,
     # if torque min/max sepecified, all min/max values need to be specified
     #  torque_min: [80, 80, 80, 80, 80, 80, 80],
     #  torque_max: [90, 90, 90, 90, 90, 90, 90],
@@ -32,5 +32,6 @@ torque_parameters: {
     # safety_factor: 1,
     # COM parameters
     # order [m1,m2,...,m7,x1,x2,...,x7,y1,y2,...y7,z1,z2,...z7]
-    com_parameters: [0,0,0,0,0,0,0, 0,0,0,0,0,0,0, 0,0,0,0,0,0,0, 0,0,0,0,0,0,0]
+    # com_parameters: [0,0,0,0,0,0,0, 0,0,0,0,0,0,0, 0,0,0,0,0,0,0, 0,0,0,0,0,0,0]
+    com_parameters: [0.0167917,-1.52641,-0.00190493,-0.0562204,-0.0359773,-0.672723,-0.000490668, -0.000840962,0.0099548,-0.22046,0.00693445,0.00469562,0.583775,-1.04688, -0.435625,1.15717,0.0823697,0.0738105,0.101988] 
 }

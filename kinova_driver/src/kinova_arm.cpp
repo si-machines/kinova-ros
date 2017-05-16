@@ -296,6 +296,7 @@ bool KinovaArm::setTorqueControlParametersService(kinova_msgs::SetTorqueControlP
                               use_estimated_COM,true);
         if (use_estimated_COM == true)
             kinova_comm_.setRobotCOMParam(OPTIMAL,com_parameters);
+            //kinova_comm_.setRobotCOMParam(OPTIMAL,estimated_COM_parameters);
         else
             kinova_comm_.setRobotCOMParam(MANUAL_INPUT,com_parameters);
 
