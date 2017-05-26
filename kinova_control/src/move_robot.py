@@ -27,7 +27,6 @@ def moveJoint (jointcmds,prefix,nbJoints):
   jointCmd.header.stamp = rospy.Time.now() + rospy.Duration.from_sec(0.0);  
   point.time_from_start = rospy.Duration.from_sec(5.0)
   for i in range(0, nbJoints):
-    #jointCmd.joint_names.append('right' +'_joint_'+str(i+1))
     jointCmd.joint_names.append(prefix +'_joint_'+str(i+1))
     point.positions.append(jointcmds[i])
     point.velocities.append(0)
@@ -73,8 +72,8 @@ if __name__ == '__main__':
       #home robots
       moveJoint ([0.0,2.9,1.3,4.2,1.4,0.0],prefix,nbJoints)
     else:
-      moveJoint ([0.0,6.0,0.0,1.3,4.2,1.4,0.0],prefix,nbJoints)
+      moveJoint ([0.0,2.9,0.0,1.3,4.2,1.4,0.0],prefix,nbJoints)
 
-    #moveFingers ([1,1,1],prefix,nbfingers)
+    moveFingers ([1,1,1],prefix,nbfingers)
   except rospy.ROSInterruptException:
     print "program interrupted before completion"
