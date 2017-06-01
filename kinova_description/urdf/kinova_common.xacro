@@ -69,7 +69,6 @@
           <hardwareInterface>PositionJointInterface</hardwareInterface>
         </joint>
         <actuator name="${joint_name}_actuator">
-          <hardwareInterface>PositionJointInterface</hardwareInterface>
         <mechanicalReduction>160</mechanicalReduction>
         </actuator>
      </transmission>
