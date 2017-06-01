@@ -19,9 +19,6 @@
     <xacro:include filename="$(find kinova_description)/urdf/kinova_common.xacro" />
     <xacro:include filename="$(find vector_description)/urdf/manipulation/robotiq/robotiq_85_gripper.urdf.xacro" />
 
-    <!-- Import all Gazebo-customization elements -->
-    <xacro:include filename="$(find kinova_description)/urdf/kinova.gazebo" />
-
     <property name="link_base_mesh" value="base" />
     <property name="link_1_mesh" value="shoulder" />
     <property name="link_2_mesh" value="arm_half_1" />
