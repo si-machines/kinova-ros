@@ -13,7 +13,12 @@ find_package(catkin REQUIRED dynamic_reconfigure COMPONENTS
   tf
   interactive_markers
   visualization_msgs
+  ecl_geometry
+  cmake_modules
 )
+
+find_package(Eigen REQUIRED)
+
 generate_dynamic_reconfigure_options(
   #cfg/KinovaPositionConfig.cfg
 )
@@ -25,6 +30,7 @@ catkin_package(
   INCLUDE_DIRS include
   LIBRARIES kinova_driver
   CATKIN_DEPENDS actionlib actionlib_msgs geometry_msgs kinova_msgs roscpp rospy sensor_msgs std_msgs tf interactive_markers visualization_msgs
+  DEPENDS Eigen
 #  DEPENDS system_lib
 )
 
@@ -35,6 +41,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN_INCLUDE_DIRS}
 )
 
 #Testers
@@ -57,7 +64,9 @@ add_library(kinova_driver
   src/kinova_fingers_action.cpp
   src/kinova_ros_types.cpp
   src/kinova_joint_trajectory_controller.cpp
+  src/hlpr_trajectory_controller.cpp
   include/kinova_driver/kinova_joint_trajectory_controller.h
+  include/kinova_driver/jaco_trajectory_controller.h
   include/kinova_driver/kinova_joint_angles_action.h
   include/kinova_driver/kinova_api.h
   include/kinova_driver/kinova_arm.h
@@ -82,6 +91,14 @@ target_link_libraries(joint_trajectory_action_server
 install(TARGETS joint_trajectory_action_server 
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 add_dependencies(joint_trajectory_action_server ${catkin_EXPORTED_TARGETS})
+
+add_executable(hlpr_trajectory_controller 
+  src/hlpr_trajectory_controller.cpp
+  include/kinova_driver/jaco_trajectory_controller.h)
+target_link_libraries(hlpr_trajectory_controller 
+  ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES} ${Eigen_LIBRARIES})
+install(TARGETS hlpr_trajectory_controller 
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 add_executable(gripper_command_action_server 
   src/joint_trajectory_action/gripper_command_action_server.cpp 
