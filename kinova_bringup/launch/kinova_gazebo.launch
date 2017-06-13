@@ -1,0 +1,17 @@
+<launch>
+
+  <arg name="use_urdf" default="false"/>
+  <arg name="kinova_robotType" default="j2s7s300" />
+  <arg name="kinova_robotName" default="$(arg kinova_robotType)"/>
+  <arg name="kinova_robotSerial" default="not_set" />
+
+  <!--node name="$(arg kinova_robotName)_driver" pkg="kinova_driver" type="kinova_arm_driver" output="screen" cwd="node" args="$(arg kinova_robotType)">
+    <rosparam file="$(find kinova_bringup)/launch/config/robot_parameters.yaml" command="load" />
+    <param name="serial_number" value="$(arg kinova_robotSerial)" />   
+    <param name="robot_name" value="$(arg kinova_robotName)" />   
+    <param name="robot_type" value="$(arg kinova_robotType)" />   
+  </node-->
+
+  <node pkg="kinova_driver" type="hlpr_trajectory_controller" name="jaco_trajectory_controller" output="screen" />
+
+</launch>
