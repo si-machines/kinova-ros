@@ -44,11 +44,13 @@ private:
   // Messages
   ros::Publisher angularCmdPublisher;
   ros::Subscriber jointStatesSubscriber;
+  ros::Publisher angCmdSimPublisher; //!< publisher for simulation argular arm commands
 
   boost::recursive_mutex executionMutex;
 
   // Parameters
   double maxCurvature;
+  bool   sim_flag_;
 
   sensor_msgs::JointState jointStates;
 

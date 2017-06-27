@@ -99,6 +99,7 @@ target_link_libraries(hlpr_trajectory_controller
   ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES} ${Eigen_LIBRARIES})
 install(TARGETS hlpr_trajectory_controller 
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+add_dependencies(hlpr_trajectory_controller ${catkin_EXPORTED_TARGETS})
 
 add_executable(gripper_command_action_server 
   src/joint_trajectory_action/gripper_command_action_server.cpp 
