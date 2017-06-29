@@ -46,8 +46,8 @@
     <property name="joint_base" value="joint_base" />
     <property name="joint_base_type" value="fixed" />
     <property name="joint_base_axis_xyz" value="0 0 0" />
-    <property name="joint_base_origin_xyz" value="0 0 0" />
-    <property name="joint_base_origin_rpy" value="0 ${J_PI/2} 0" />
+    <property name="joint_base_origin_xyz" value="0.06079866 0 0" />
+    <property name="joint_base_origin_rpy" value="${J_PI/2} 0 ${J_PI/2}" />
 
     <property name="joint_1" value="joint_1" />
     <property name="joint_1_type" value="continuous" />
@@ -113,7 +113,7 @@
 
 
     <!--xacro:macro name="jaco_robot" params="parent prefix"-->
-    <xacro:macro name="j2s7s300" params="base_parent prefix:=j2s7s300">
+    <xacro:macro name="j2s7s300" params="base_parent prefix:=j2s7s300 *origin">
 
         <xacro:gazebo_config robot_namespace="${prefix}"/>
     
