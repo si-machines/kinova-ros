@@ -2,7 +2,7 @@
 <launch>
 
     <!-- Gazebo vs. Real Robot Arm -->
-    <arg name="sim" default="true" />
+    <arg name="sim" default="false" />
 
     <!-- Gripper Params --> 
     <arg name="comport" default="/dev/ttyUSB0"/>
@@ -20,9 +20,9 @@
     </node>
 
     <!-- Start the trajectory server driver -->
-    <node pkg="kinova_driver" type="hlpr_trajectory_controller" name="jaco_trajectory_controller" output="screen">
+    <!--node pkg="kinova_driver" type="hlpr_trajectory_controller" name="jaco_trajectory_controller" output="screen">
         <param name="sim" value="$(arg sim)"/>
-    </node>
+    </node-->
 
     <!-- NOTE: need to check if we already do this on vector
          Start the gripper driver if we are not in simulation -->

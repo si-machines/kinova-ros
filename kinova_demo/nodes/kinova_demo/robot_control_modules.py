@@ -227,21 +227,27 @@ def publishForceCmd(force_cmds, duration_sec, prefix):
 def publishTorqueCmd(jointCmds, duration_sec, prefix):	
 
   #use service to set torque control parameters	
-  service_address = '/' + prefix + 'driver/in/set_torque_control_parameters'	
+  '''service_address = '/' + prefix + 'driver/in/set_torque_control_parameters'	
+  print "Watiting for service %s" % service_address
   rospy.wait_for_service(service_address)
+  print "Service loaded"
   try:
 	  setTorqueParameters = rospy.ServiceProxy(service_address, SetTorqueControlParameters)
 	  setTorqueParameters()           
+	  print "Finished setting torque paramters"
   except rospy.ServiceException, e:
-	  print "Service call failed: %s"%e
-	  return None	
+  	  print "Service call failed: %s"%e
+  	  return None	
+  '''
 
   #use service to switch to torque control	
   service_address = '/' + prefix + 'driver/in/set_torque_control_mode'	
   rospy.wait_for_service(service_address)
   try:
 	  switchTorquemode = rospy.ServiceProxy(service_address, SetTorqueControlMode)
+	  #ZeroTorque(prefix)
 	  switchTorquemode(1)           
+          print "Finished setting torque mode"
   except rospy.ServiceException, e:
 	  print "Service call failed: %s"%e
 	  return None	

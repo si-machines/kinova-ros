@@ -179,6 +179,12 @@ KinovaArm::KinovaArm(KinovaComm &arm, const ros::NodeHandle &nodeHandle, const s
     stop_force_control_service_ = node_handle_.advertiseService("in/stop_force_control", &KinovaArm::stopForceControlCallback, this);
     set_actuator_torques_to_zero_ = node_handle_.advertiseService(
                 "in/set_zero_torques", &KinovaArm::setJointTorquesToZeroService, this);
+    set_first_torque_to_zero_ = node_handle_.advertiseService(
+                "in/set_zero_torques_first_joint", &KinovaArm::setFirstTorqueToZeroService, this);
+    start_gravity_comp_ = node_handle_.advertiseService(
+                "in/start_gravity_comp", &KinovaArm::startGravityCompService, this);
+    stop_gravity_comp_ = node_handle_.advertiseService(
+                "in/stop_gravity_comp", &KinovaArm::stopGravityCompService, this);
     run_COM_parameter_estimation_service_ = node_handle_.advertiseService(
                 "in/run_COM_parameters_estimation",
                 &KinovaArm::runCOMParameterEstimationService,this);
@@ -197,6 +203,8 @@ KinovaArm::KinovaArm(KinovaComm &arm, const ros::NodeHandle &nodeHandle, const s
             ("out/joint_angles", 2);
     joint_torque_publisher_ = node_handle_.advertise<kinova_msgs::JointAngles>
             ("out/joint_torques", 2);
+    gf_joint_torque_publisher_ = node_handle_.advertise<kinova_msgs::JointAngles>
+            ("out/gf_joint_torques", 2);
     joint_state_publisher_ = node_handle_.advertise<sensor_msgs::JointState>
             ("out/joint_state", 2);
     tool_position_publisher_ = node_handle_.advertise<geometry_msgs::PoseStamped>
@@ -256,10 +264,25 @@ bool KinovaArm::ActivateNullSpaceModeCallback(kinova_msgs::SetNullSpaceModeState
 bool KinovaArm::setTorqueControlModeService(kinova_msgs::SetTorqueControlMode::Request &req, kinova_msgs::SetTorqueControlMode::Response &res)
 {
     kinova_comm_.SetTorqueControlState(req.state);
+
+    bool is_prentice;
+    node_handle_.param("torque_parameters/is_prentice",
+                              is_prentice,false);
+    if (is_prentice == true)
+        {
+                // Gravity vector in -Y
+                float GravityVector[3];
+                GravityVector[0] = 0;// -9.81; 
+                GravityVector[1] = -9.81;// 0;
+                GravityVector[2] = 0;// 0;
+                kinova_comm_.setGravityVector(GravityVector);
+        }
+
 }
 
 bool KinovaArm::setTorqueControlParametersService(kinova_msgs::SetTorqueControlParameters::Request &req, kinova_msgs::SetTorqueControlParameters::Response &res)
 {    
+    ROS_INFO("Entered Torque Param Service");
     float safetyFactor;
     node_handle_.param<float>("torque_parameters/safety_factor", safetyFactor,1.0);
     kinova_comm_.setToquesControlSafetyFactor(safetyFactor);
@@ -291,6 +314,7 @@ bool KinovaArm::setTorqueControlParametersService(kinova_msgs::SetTorqueControlP
     std::vector<float> com_parameters;
     if (node_handle_.getParam("torque_parameters/com_parameters", com_parameters))
     {
+        ROS_INFO("Getting COM Params");
         bool use_estimated_COM;
         node_handle_.param("torque_parameters/use_estimated_COM_parameters",
                               use_estimated_COM,true);
@@ -299,7 +323,6 @@ bool KinovaArm::setTorqueControlParametersService(kinova_msgs::SetTorqueControlP
             //kinova_comm_.setRobotCOMParam(OPTIMAL,estimated_COM_parameters);
         else
             kinova_comm_.setRobotCOMParam(MANUAL_INPUT,com_parameters);
-
     }
 }
 
@@ -459,6 +482,27 @@ bool KinovaArm::setJointTorquesToZeroService(kinova_msgs::ZeroTorques::Request &
     return true;
 }
 
+bool KinovaArm::setFirstTorqueToZeroService(kinova_msgs::ZeroTorques::Request &req,
+                                             kinova_msgs::ZeroTorques::Response &res)
+{
+    kinova_comm_.setZeroTorqueFirstJoint();
+    return true;
+}
+
+bool KinovaArm::startGravityCompService(kinova_msgs::Start::Request &req,
+                                             kinova_msgs::Start::Response &res)
+{
+    kinova_comm_.enableGravComp();
+    return true;
+}
+
+bool KinovaArm::stopGravityCompService(kinova_msgs::Stop::Request &req,
+                                             kinova_msgs::Stop::Response &res)
+{
+    kinova_comm_.disableGravComp();
+    return true;
+}
+
 bool KinovaArm::runCOMParameterEstimationService(
         kinova_msgs::RunCOMParametersEstimation::Request &req,
         kinova_msgs::RunCOMParametersEstimation::Response &res)
@@ -599,14 +643,15 @@ void KinovaArm::publishJointAngles(void)
 
 
     // Joint torques (effort)
-    KinovaAngles joint_tqs;
+    KinovaAngles joint_tqs, gf_joint_tqs;
     bool gravity_comp;
     node_handle_.param("torque_parameters/publish_torque_with_gravity_compensation", gravity_comp, false);
-    if (gravity_comp==true)
-      kinova_comm_.getGravityCompensatedTorques(joint_tqs);
-    else
-      kinova_comm_.getJointTorques(joint_tqs);
+    //if (gravity_comp==true)
+    kinova_comm_.getGravityCompensatedTorques(gf_joint_tqs);
+    //else
+    kinova_comm_.getJointTorques(joint_tqs);
     joint_torque_publisher_.publish(joint_tqs.constructAnglesMsg());
+    gf_joint_torque_publisher_.publish(gf_joint_tqs.constructAnglesMsg());
 
     joint_state.effort.resize(joint_total_number_);
     joint_state.effort[0] = joint_tqs.Actuator1;

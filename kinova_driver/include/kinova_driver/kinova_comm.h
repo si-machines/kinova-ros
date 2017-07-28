@@ -115,12 +115,14 @@ class KinovaComm
     void SetTorqueControlState(int state);
     void setJointTorques(float joint_torque[]);
     void setZeroTorque();
+    void setZeroTorqueFirstJoint();
     void getGravityCompensatedTorques(KinovaAngles &torques);
 
     //Set torque parameters
     void setRobotCOMParam(GRAVITY_TYPE type, std::vector<float> params);
     void setJointTorqueMinMax(AngularInfo &min, AngularInfo &max);
     void setPayload(std::vector<float> payload);
+    void setGravityVector(float gravity_vector[]);
     void setToquesControlSafetyFactor(float factor);
     int sendCartesianForceCommand(float force_cmd[COMMAND_SIZE]);
     int runCOMParameterEstimation(ROBOT_TYPE type);
@@ -175,6 +177,8 @@ class KinovaComm
     //!Resolve redundancy for 7 dof robot using Least square solution
     int SetRedundancyResolutionToleastSquares(int state);
 
+    void enableGravComp();
+    void disableGravComp();
      // %EndTag(Cartesian Control)%
 
 
