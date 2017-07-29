@@ -25,6 +25,7 @@ if __name__ == '__main__':
 	try:        
 		prefix, nbJoints = argumentParser(None)	
 		rospy.init_node('torque_compensated_mode')
+		"""
 		if (interactive == True):        
 			nb = raw_input("Moving robot to candle like position, and setting zero torques, press return to start, n to skip")
 		if (nb != "n" and nb != "N"):
@@ -33,10 +34,10 @@ if __name__ == '__main__':
 
 			if (interactive == True):        
 				nb = raw_input('Setting torques to zero, press return')			
-			ZeroTorque(prefix)
-
+		"""
+	        ZeroTorque(prefix)
 		if (interactive == True):
-			nb = raw_input('Starting gravity compensation mode')
+			nb = raw_input('Starting gravity compensation mode. Press enter to start')
 
 			publishTorqueCmd([0,0,0,0,0,0,0], duration_sec, prefix)
 
