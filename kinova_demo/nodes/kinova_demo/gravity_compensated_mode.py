@@ -35,7 +35,7 @@ if __name__ == '__main__':
 			if (interactive == True):        
 				nb = raw_input('Setting torques to zero, press return')			
 		"""
-	        ZeroTorque(prefix)
+	        #ZeroTorque(prefix)
 		if (interactive == True):
 			nb = raw_input('Starting gravity compensation mode. Press enter to start')
 

@@ -283,6 +283,11 @@ bool KinovaComm::isStopped()
 void KinovaComm::startForceControl()
 {
     boost::recursive_mutex::scoped_lock lock(api_mutex_);
+    float GravityVector[3];
+    GravityVector[0] = 0;// -9.81; 
+    GravityVector[1] = -9.81;// 0;
+    GravityVector[2] = 0;// 0;
+    setGravityVector(GravityVector);
     int result = kinova_api_.startForceControl();
     if (result != NO_ERROR_KINOVA)
     {
@@ -778,7 +783,7 @@ void KinovaComm::getJointCurrent(AngularPosition &anguler_current)
 void KinovaComm::setZeroTorque()
 {
     boost::recursive_mutex::scoped_lock lock(api_mutex_);
-    int actuator_address[] = {16,17,18,19,20,21,25};
+    int actuator_address[] = {16,17,18,19,20,21,22};
     int result;
     for (int i=0;i<num_joints_;i++)
     {
@@ -790,6 +795,22 @@ void KinovaComm::setZeroTorque()
     }
     ROS_WARN("Torques for all joints set to zero");
 }
+
+void KinovaComm::setZeroTorqueFirstJoint()
+{
+    boost::recursive_mutex::scoped_lock lock(api_mutex_);
+    int actuator_address = 16;
+    int result = kinova_api_.setTorqueZero(actuator_address);
+    if (result != NO_ERROR_KINOVA)
+    {
+        throw KinovaCommException("Could not set zero torques", result);
+    }
+    ROS_WARN("Torques for first joint set to zero");
+}
+
+
+/**
+ * @brief This function set the angular torque's maximum and minimum values.
 
 
 /**
@@ -828,6 +849,20 @@ void KinovaComm::setPayload(std::vector<float> payload)
     if (result != NO_ERROR_KINOVA)
     {
         throw KinovaCommException("Could not set the gravity payload", result);
+    }
+}
+
+
+void KinovaComm::setGravityVector(float gravity_vector[])
+{
+    float gravity_vector_[3];
+    //std::copy(gravity_vector.begin(), gravity_vector.end(), gravity_vector_);
+    ROS_INFO("Gravity vector set to - %f %f %f", gravity_vector[0], gravity_vector[1],
+            gravity_vector[2]);
+    int result = kinova_api_.setGravityVector(gravity_vector);
+    if (result != NO_ERROR_KINOVA)
+    {
+        throw KinovaCommException("Could not set the gravity vector", result);
     }
 }
 
@@ -1584,6 +1619,34 @@ int KinovaComm::SetRedundantJointNullSpaceMotion(int state)
     {
         throw KinovaCommException("Could not set redundant joint null space mode", result);
     }
+}
+
+void KinovaComm::enableGravComp()
+{
+    ROS_INFO("Setting gc as feed forward gravity torques");
+    float GravityVector[3];
+    GravityVector[0] = 0;// -9.81; 
+    GravityVector[1] = -9.81;// 0;
+    GravityVector[2] = 0;// 0;
+    setGravityVector(GravityVector);
+
+    kinova_api_.setTorqueControlType(DIRECTTORQUE);
+    kinova_api_.setTorqueSafetyFactor(1.0);
+    kinova_api_.setTorqueVibrationController(0.5);
+    kinova_api_.setTorqueRobotProtection(1);
+    kinova_api_.switchTrajectoryTorque(TORQUE);
+    float jointCmd[7];
+    for (int i = 0; i < 7; i++)
+      jointCmd[i] = 0;
+    kinova_api_.sendAngularTorqueCommand(jointCmd);
+}
+
+void KinovaComm::disableGravComp()
+{
+    ROS_INFO("Stopping torque mode for gc");
+    kinova_api_.setTorqueRobotProtection(2);
+    kinova_api_.setTorqueSafetyFactor(0.6);
+    kinova_api_.switchTrajectoryTorque(POSITION);
 }
 
 int KinovaComm::SetRedundancyResolutionToleastSquares(int state)

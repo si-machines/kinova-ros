@@ -3,7 +3,7 @@
 using namespace std;
 
 JacoTrajectoryController::JacoTrajectoryController() : pnh("~"),
-  smoothTrajectoryServer(pnh, "smooth_trajectory", boost::bind(&JacoTrajectoryController::executeSmoothTrajectory, this, _1), false)
+  smoothTrajectoryServer(pnh, "trajectory", boost::bind(&JacoTrajectoryController::executeSmoothTrajectory, this, _1), false)
 {
   pnh.param("max_curvature", maxCurvature, 100.0);
   pnh.param("sim", sim_flag_, false);

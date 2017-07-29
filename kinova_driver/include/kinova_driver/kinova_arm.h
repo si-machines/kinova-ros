@@ -92,12 +92,18 @@ class KinovaArm
                                    kinova_msgs::Start::Response &res);
     bool stopForceControlCallback(kinova_msgs::Stop::Request &req,
                                   kinova_msgs::Stop::Response &res);
+    bool startGravityCompService(kinova_msgs::Start::Request &req,
+                                  kinova_msgs::Start::Response &res);
+    bool stopGravityCompService(kinova_msgs::Stop::Request &req,
+                                  kinova_msgs::Stop::Response &res);
 
     bool setTorqueControlModeService(kinova_msgs::SetTorqueControlMode::Request &req,
                                      kinova_msgs::SetTorqueControlMode::Response &res);
     bool setTorqueControlParametersService(kinova_msgs::SetTorqueControlParameters::Request &req,
                                            kinova_msgs::SetTorqueControlParameters::Response &res);
     bool setJointTorquesToZeroService(kinova_msgs::ZeroTorques::Request &req,
+                                      kinova_msgs::ZeroTorques::Response &res);
+    bool setFirstTorqueToZeroService(kinova_msgs::ZeroTorques::Request &req,
                                       kinova_msgs::ZeroTorques::Response &res);
     bool runCOMParameterEstimationService(kinova_msgs::RunCOMParametersEstimation::Request &req,
                                           kinova_msgs::RunCOMParametersEstimation::Response &res);
@@ -126,6 +132,7 @@ class KinovaArm
     ros::Publisher joint_angles_publisher_;
     ros::Publisher tool_position_publisher_;
     ros::Publisher joint_torque_publisher_;
+    ros::Publisher gf_joint_torque_publisher_;
     ros::Publisher tool_wrench_publisher_;
     ros::Publisher finger_position_publisher_;
     ros::Publisher joint_state_publisher_;
@@ -143,6 +150,9 @@ class KinovaArm
     ros::ServiceServer set_torque_control_mode_service_;
     ros::ServiceServer set_torque_control_parameters_service_;
     ros::ServiceServer set_actuator_torques_to_zero_;
+    ros::ServiceServer set_first_torque_to_zero_;
+    ros::ServiceServer start_gravity_comp_;
+    ros::ServiceServer stop_gravity_comp_;
     ros::ServiceServer set_force_control_params_service_;
     ros::ServiceServer start_force_control_service_;
     ros::ServiceServer stop_force_control_service_;
