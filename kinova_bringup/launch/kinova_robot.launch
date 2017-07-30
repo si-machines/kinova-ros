@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <launch>
 
   <arg name="use_urdf" default="true"/>
@@ -13,6 +14,12 @@
     <param name="serial_number" value="$(arg kinova_robotSerial)" />   
     <param name="robot_name" value="$(arg kinova_robotName)" />   
     <param name="robot_type" value="$(arg kinova_robotType)" />   
+  </node>
+
+  <!-- Setup joint state publisher -->
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+        <param name="use_gui" value="false" />
+        <rosparam param="source_list">[j2s7s300_driver/out/joint_state, gripper/joint_states, vector/joint_states]</rosparam>
   </node>
 
   <!--
