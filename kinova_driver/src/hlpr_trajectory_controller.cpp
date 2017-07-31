@@ -29,6 +29,12 @@ JacoTrajectoryController::JacoTrajectoryController() : pnh("~"),
   {
     ROS_INFO("Using simulation robot arm.");
 
+    // Setup a fake gravity comp service
+    start_gravity_comp_ = n.advertiseService(
+                "j2s7s300/in/start_gravity_comp", &JacoTrajectoryController::startGravityCompService, this);
+    stop_gravity_comp_ = n.advertiseService(
+                "j2s7s300/in/stop_gravity_comp", &JacoTrajectoryController::stopGravityCompService, this);
+
     // Connect to the gazebo low-level ros controller
     angCmdSimPublisher = n.advertise<trajectory_msgs::JointTrajectory>("/j2s7s300/command", 1);
   }
@@ -39,6 +45,24 @@ JacoTrajectoryController::JacoTrajectoryController() : pnh("~"),
 
   // Start the trajectory server
   smoothTrajectoryServer.start();
+}
+
+/** Fake Gravity Comp Services for Simulation **/
+bool JacoTrajectoryController::startGravityCompService(kinova_msgs::Start::Request &req,
+                                             kinova_msgs::Start::Response &res)
+{
+    ROS_INFO("Simulation 'enabled' grav comp. Note: nothing actually happens");
+    res.start_result = "Start gravity compensation requested.";
+    return true;
+}
+
+/** Fake Gravity Comp Services for Simulation **/
+bool JacoTrajectoryController::stopGravityCompService(kinova_msgs::Stop::Request &req,
+                                             kinova_msgs::Stop::Response &res)
+{
+    ROS_INFO("Simulation 'disabled' grav comp. Note: nothing actually happens");
+    res.stop_result = "Stop gravity compensation requested.";
+    return true;
 }
 
 void JacoTrajectoryController::jointStateCallback(const sensor_msgs::JointState &msg)

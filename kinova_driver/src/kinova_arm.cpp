@@ -493,6 +493,7 @@ bool KinovaArm::startGravityCompService(kinova_msgs::Start::Request &req,
                                              kinova_msgs::Start::Response &res)
 {
     kinova_comm_.enableGravComp();
+    res.start_result = "Start gravity compensation requested.";
     return true;
 }
 
@@ -500,6 +501,7 @@ bool KinovaArm::stopGravityCompService(kinova_msgs::Stop::Request &req,
                                              kinova_msgs::Stop::Response &res)
 {
     kinova_comm_.disableGravComp();
+    res.stop_result = "Stop gravity compensation requested.";
     return true;
 }
 
