@@ -8,6 +8,8 @@
 #include <boost/thread/recursive_mutex.hpp>
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <ecl/geometry.hpp>
+#include <kinova_msgs/Stop.h>
+#include <kinova_msgs/Start.h>
 #include <kinova_msgs/JointVelocity.h>
 #include <sensor_msgs/JointState.h>
 
@@ -30,6 +32,11 @@ class JacoTrajectoryController
 public:
   JacoTrajectoryController();
 
+  bool startGravityCompService(kinova_msgs::Start::Request &req,
+                                kinova_msgs::Start::Response &res);
+  bool stopGravityCompService(kinova_msgs::Stop::Request &req,
+                                  kinova_msgs::Stop::Response &res);
+
   void jointStateCallback(const sensor_msgs::JointState &msg);
 
   void executeSmoothTrajectory(const control_msgs::FollowJointTrajectoryGoalConstPtr &goal);
@@ -45,6 +52,10 @@ private:
   ros::Publisher angularCmdPublisher;
   ros::Subscriber jointStatesSubscriber;
   ros::Publisher angCmdSimPublisher; //!< publisher for simulation argular arm commands
+
+  // Fake gravity comp services for simulation
+  ros::ServiceServer start_gravity_comp_;
+  ros::ServiceServer stop_gravity_comp_;
 
   boost::recursive_mutex executionMutex;
 
