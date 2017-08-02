@@ -29,11 +29,15 @@ JacoTrajectoryController::JacoTrajectoryController() : pnh("~"),
   {
     ROS_INFO("Using simulation robot arm.");
 
-    // Setup a fake gravity comp service
+    // Setup a fake gravity comp service (torque control)
     start_gravity_comp_ = n.advertiseService(
                 "j2s7s300_driver/in/start_gravity_comp", &JacoTrajectoryController::startGravityCompService, this);
     stop_gravity_comp_ = n.advertiseService(
                 "j2s7s300_driver/in/stop_gravity_comp", &JacoTrajectoryController::stopGravityCompService, this);
+
+    // Setup a fake admittance service (Force control)
+    start_force_control_service_ = n.advertiseService("j2s7s300_driver/in/start_force_control", &JacoTrajectoryController::startForceControlCallback, this);
+    stop_force_control_service_ = n.advertiseService("j2s7s300_driver/in/stop_force_control", &JacoTrajectoryController::stopForceControlCallback, this);
 
     // Connect to the gazebo low-level ros controller
     angCmdSimPublisher = n.advertise<trajectory_msgs::JointTrajectory>("/j2s7s300/command", 1);
@@ -62,6 +66,20 @@ bool JacoTrajectoryController::stopGravityCompService(kinova_msgs::Stop::Request
 {
     ROS_INFO("Simulation 'disabled' grav comp. Note: nothing actually happens");
     res.stop_result = "Stop gravity compensation requested.";
+    return true;
+}
+
+bool JacoTrajectoryController::startForceControlCallback(kinova_msgs::Start::Request &req, kinova_msgs::Start::Response &res)
+{
+    ROS_INFO("Simulation 'enabled' admittance mode. Note: nothing actually happens");
+    res.start_result = "Start force control requested.";
+    return true;
+}
+
+bool JacoTrajectoryController::stopForceControlCallback(kinova_msgs::Stop::Request &req, kinova_msgs::Stop::Response &res)
+{
+    ROS_INFO("Simulation 'disabled' admittance mode. Note: nothing actually happens");
+    res.stop_result = "Stop force control requested.";
     return true;
 }
 

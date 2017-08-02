@@ -37,6 +37,11 @@ public:
   bool stopGravityCompService(kinova_msgs::Stop::Request &req,
                                   kinova_msgs::Stop::Response &res);
 
+  bool startForceControlCallback(kinova_msgs::Start::Request &req,
+                                   kinova_msgs::Start::Response &res);
+  bool stopForceControlCallback(kinova_msgs::Stop::Request &req,
+                                  kinova_msgs::Stop::Response &res);
+
   void jointStateCallback(const sensor_msgs::JointState &msg);
 
   void executeSmoothTrajectory(const control_msgs::FollowJointTrajectoryGoalConstPtr &goal);
@@ -56,6 +61,8 @@ private:
   // Fake gravity comp services for simulation
   ros::ServiceServer start_gravity_comp_;
   ros::ServiceServer stop_gravity_comp_;
+  ros::ServiceServer start_force_control_service_;
+  ros::ServiceServer stop_force_control_service_;
 
   boost::recursive_mutex executionMutex;
 
