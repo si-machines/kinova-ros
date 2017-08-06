@@ -197,7 +197,7 @@ KinovaComm::KinovaComm(const ros::NodeHandle& node_handle,
 
     //Set torque safety factor to 1
     kinova_api_.setTorqueSafetyFactor(1);
-
+    setGravCompParams();
 
     // Set the angular velocity of each of the joints to zero
     TrajectoryPoint kinova_velocity;
@@ -1621,9 +1621,9 @@ int KinovaComm::SetRedundantJointNullSpaceMotion(int state)
     }
 }
 
-void KinovaComm::enableGravComp()
+void KinovaComm::setGravCompParams()
 {
-    ROS_INFO("Setting gc as feed forward gravity torques");
+    ROS_INFO("Setting gravity vector");
     float GravityVector[3];
     GravityVector[0] = 0;// -9.81; 
     GravityVector[1] = -9.81;// 0;
@@ -1631,8 +1631,13 @@ void KinovaComm::enableGravComp()
     setGravityVector(GravityVector);
 
     kinova_api_.setTorqueControlType(DIRECTTORQUE);
-    kinova_api_.setTorqueSafetyFactor(1.0);
     kinova_api_.setTorqueVibrationController(0.5);
+}
+
+void KinovaComm::enableGravComp()
+{
+    ROS_INFO("Setting gc as feed forward gravity torques");
+    kinova_api_.setTorqueSafetyFactor(1.0);
     kinova_api_.setTorqueRobotProtection(1);
     kinova_api_.switchTrajectoryTorque(TORQUE);
     float jointCmd[7];
