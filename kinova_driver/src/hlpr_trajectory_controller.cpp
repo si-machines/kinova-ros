@@ -223,7 +223,7 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
     angCmdSimPublisher.publish(jtm);
 
     // Wait a second for the arm to move a bit
-    ros::Duration(1.0).sleep();
+    ros::Duration(0.1).sleep();
 
     // Check the total error to determine if the trajectory finished
     totalError = 1.0;
@@ -246,6 +246,8 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
           totalError += fabs(error[i]);
         }
 
+    // Rate to check if error has changed
+    ros::Duration(0.1).sleep();
     }
 
     // Tell the server we finished the trajectory
