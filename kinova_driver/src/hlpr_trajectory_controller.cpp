@@ -85,7 +85,39 @@ bool JacoTrajectoryController::stopForceControlCallback(kinova_msgs::Stop::Reque
 
 void JacoTrajectoryController::jointStateCallback(const sensor_msgs::JointState &msg)
 {
-  jointStates = msg;
+  // Get the names of all the joints
+  std::vector<std::string> pub_joint_names = msg.name;
+
+  // Create a new message
+  sensor_msgs::JointState arm_msg;
+  std::vector<double> position, velocity, effort;
+  std::vector<std::string> names;
+  position.resize(NUM_JACO_JOINTS);
+  velocity.resize(NUM_JACO_JOINTS);
+  effort.resize(NUM_JACO_JOINTS);
+  names.resize(NUM_JACO_JOINTS);
+  arm_msg.position = position;
+  arm_msg.velocity = velocity;
+  arm_msg.effort = effort;
+  arm_msg.name = names;
+
+  // Cycle through the number of JACO joints
+  for (int joint_id = 0; joint_id < NUM_JACO_JOINTS; joint_id++){
+
+    // Find the location of the joint
+    string joint_name = jointNames[joint_id];
+    int msg_loc = distance(pub_joint_names.begin(), find(pub_joint_names.begin(), pub_joint_names.end(), joint_name));
+
+    // Pull out joint loc and store
+    arm_msg.position[joint_id] = msg.position[msg_loc];
+    arm_msg.name[joint_id] = msg.name[msg_loc];
+    arm_msg.velocity[joint_id] = msg.velocity[msg_loc];
+    arm_msg.effort[joint_id] = msg.effort[msg_loc];
+  }
+
+  jointStates = arm_msg;
+  //cout << "Current names: " << jointStates.name[0] << ", " << jointStates.name[1] << ", " << jointStates.name[2] << ", " << jointStates.name[3] << ", " << jointStates.name[4] << ", " << jointStates.name[5] << jointStates.name[6] << endl;
+  //cout << "Current values: " << jointStates.position[0] << ", " << jointStates.position[1] << ", " << jointStates.position[2] << ", " << jointStates.position[3] << ", " << jointStates.position[4] << ", " << jointStates.position[5] << jointStates.position[6] << endl;
 }
 
 /** Adjust angle to equivalent angle on [-pi, pi]
