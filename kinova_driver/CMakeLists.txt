@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(kinova_driver)
+add_compile_options(-std=c++11)
 
 find_package(catkin REQUIRED dynamic_reconfigure COMPONENTS
   actionlib
@@ -18,7 +19,6 @@ find_package(catkin REQUIRED dynamic_reconfigure COMPONENTS
 )
 
 find_package(Eigen REQUIRED)
-
 generate_dynamic_reconfigure_options(
   #cfg/KinovaPositionConfig.cfg
 )
