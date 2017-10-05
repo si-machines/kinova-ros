@@ -112,7 +112,10 @@ class KinovaArm
     void positionTimer(const ros::TimerEvent&);
     void cartesianVelocityTimer(const ros::TimerEvent&);
     void jointVelocityTimer(const ros::TimerEvent&);
-    void statusTimer(const ros::TimerEvent&);
+    void statusTimerJointStates(const ros::TimerEvent&);
+    void statusTimerToolPosition(const ros::TimerEvent&);
+    void statusTimerToolWrench(const ros::TimerEvent&);
+    void statusTimerFingerStates(const ros::TimerEvent&);
 
     void publishJointAngles(void);
     void publishToolPosition(void);
@@ -161,7 +164,10 @@ class KinovaArm
     ros::ServiceServer set_end_effector_offset_service_;
 
     // Timers for control loops
-    ros::Timer status_timer_;
+    ros::Timer status_timer_joint_states_;
+    ros::Timer status_timer_tool_position_;
+    ros::Timer status_timer_tool_wrench_;
+    ros::Timer status_timer_finger_states_;
 
     // Parameters
     std::string kinova_robotType_;
@@ -175,6 +181,8 @@ class KinovaArm
     int finger_number_;
     int joint_total_number_;
     ROBOT_TYPE robot_type_;
+
+    bool kinova_gripper_; //true if using a kinova gripper, false if using a custom gripper
 
 
     double status_interval_seconds_;

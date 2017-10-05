@@ -137,22 +137,26 @@ KinovaArm::KinovaArm(KinovaComm &arm, const ros::NodeHandle &nodeHandle, const s
         // special parameters for custom robot or other cases
     }
 
+    node_handle_.param<bool>("kinova_gripper", kinova_gripper_, true);
 
-    if (finger_number_==3)
+    if (kinova_gripper_)
     {
-        // finger_angle_conv_ratio used to display finger position properly in Rviz
-        // Approximative conversion ratio from finger position (0..6400) to joint angle
-        // in radians (0.. 1.4) for 3 finger hand
-        finger_conv_ratio_= 1.4 / 6400.0;
-    }
-    else if(finger_number_==2)
-    {
-        // the two finger hand may different
-        finger_conv_ratio_= 1.4 / 6400.0;
-    }
-    else
-    {
-        // no fingers
+        if (finger_number_==3)
+        {
+            // finger_angle_conv_ratio used to display finger position properly in Rviz
+            // Approximative conversion ratio from finger position (0..6400) to joint angle
+            // in radians (0.. 1.4) for 3 finger hand
+            finger_conv_ratio_= 1.4 / 6400.0;
+        }
+        else if(finger_number_==2)
+        {
+            // the two finger hand may different
+            finger_conv_ratio_= 1.4 / 6400.0;
+        }
+        else
+        {
+            // no fingers
+        }
     }
 
     for (int i = 0; i<arm_joint_number_; i++)
@@ -160,9 +164,12 @@ KinovaArm::KinovaArm(KinovaComm &arm, const ros::NodeHandle &nodeHandle, const s
         joint_names_.resize(joint_total_number_);
         joint_names_[i] = tf_prefix_ + "joint_" + boost::lexical_cast<std::string>(i+1);
     }
-    for (int i = 0; i<finger_number_; i++)
+    if (kinova_gripper_)
     {
-        joint_names_[arm_joint_number_+i] = tf_prefix_ + "joint_finger_" + boost::lexical_cast<std::string>(i+1);
+        for (int i = 0; i<finger_number_; i++)
+        {
+            joint_names_[arm_joint_number_+i] = tf_prefix_ + "joint_finger_" + boost::lexical_cast<std::string>(i+1);
+        }
     }
 
     /* Set up Services */
@@ -211,8 +218,11 @@ KinovaArm::KinovaArm(KinovaComm &arm, const ros::NodeHandle &nodeHandle, const s
             ("out/tool_pose", 2);
     tool_wrench_publisher_ = node_handle_.advertise<geometry_msgs::WrenchStamped>
             ("out/tool_wrench", 2);
-    finger_position_publisher_ = node_handle_.advertise<kinova_msgs::FingerPosition>
-            ("out/finger_position", 2);
+    if (kinova_gripper_)
+    {
+        finger_position_publisher_ = node_handle_.advertise<kinova_msgs::FingerPosition>
+                ("out/finger_position", 2);
+    }
 
     // Publish last command for relative motion (read current position cause arm drop)
     joint_command_publisher_ = node_handle_.advertise<kinova_msgs::JointAngles>("out/joint_command", 2);
@@ -230,14 +240,25 @@ KinovaArm::KinovaArm(KinovaComm &arm, const ros::NodeHandle &nodeHandle, const s
 
     node_handle_.param<double>("status_interval_seconds", status_interval_seconds_, 0.1);
 
+    ROS_INFO("Status interval (seconds): %f", status_interval_seconds_);
+
     // Depending on the API version, the arm might return velocities in the
     // 0..360 range (0..180 for positive values, 181..360 for negative ones).
     // This indicates that the ROS node should convert them first before
     // updating the joint_state topic.
     node_handle_.param("convert_joint_velocities", convert_joint_velocities_, true);
 
-    status_timer_ = node_handle_.createTimer(ros::Duration(status_interval_seconds_),
-                                           &KinovaArm::statusTimer, this);
+    status_timer_joint_states_ = node_handle_.createTimer(ros::Duration(status_interval_seconds_),
+                                           &KinovaArm::statusTimerJointStates, this);
+    status_timer_tool_position_ = node_handle_.createTimer(ros::Duration(status_interval_seconds_),
+                                             &KinovaArm::statusTimerToolPosition, this);
+    status_timer_tool_wrench_ = node_handle_.createTimer(ros::Duration(status_interval_seconds_),
+                                             &KinovaArm::statusTimerToolWrench, this);
+    if (kinova_gripper_)
+    {
+        status_timer_finger_states_ = node_handle_.createTimer(ros::Duration(status_interval_seconds_),
+                                                 &KinovaArm::statusTimerFingerStates, this);
+    }
 
     ROS_INFO("The arm is ready to use.");
 }
@@ -548,10 +569,6 @@ void KinovaArm::cartesianVelocityCallback(const kinova_msgs::PoseVelocityConstPt
  */
 void KinovaArm::publishJointAngles(void)
 {
-
-    FingerAngles fingers;
-    kinova_comm_.getFingerPositions(fingers);
-
     if (arm_joint_number_ != 4 && arm_joint_number_ != 6 && arm_joint_number_ != 7)
     {
          ROS_WARN_ONCE("The joint_state publisher only supports 4, 6 and 7 DOF for now.: %d", arm_joint_number_);
@@ -562,9 +579,12 @@ void KinovaArm::publishJointAngles(void)
     kinova_comm_.getJointAngles(current_angles);
     kinova_msgs::JointAngles kinova_angles = current_angles.constructAnglesMsg();
 
+    //TODO: is this necessary?
+    /*
     AngularPosition joint_command;
     kinova_comm_.getAngularCommand(joint_command);
     kinova_msgs::JointAngles joint_command_msg = KinovaAngles(joint_command.Actuators).constructAnglesMsg();
+    */
 
     sensor_msgs::JointState joint_state;
     joint_state.name = joint_names_;
@@ -584,20 +604,7 @@ void KinovaArm::publishJointAngles(void)
     if (arm_joint_number_ == 7)
     {
          joint_state.position[6] = kinova_angles.joint7 * M_PI/180;
-    }    
-
-    if(finger_number_==2)
-    {
-        joint_state.position[joint_total_number_-2] = fingers.Finger1/6800*80*M_PI/180;
-        joint_state.position[joint_total_number_-1] = fingers.Finger2/6800*80*M_PI/180;
     }
-    else if(finger_number_==3)
-    {
-        joint_state.position[joint_total_number_-3] = fingers.Finger1/6800*80*M_PI/180;
-        joint_state.position[joint_total_number_-2] = fingers.Finger2/6800*80*M_PI/180;
-        joint_state.position[joint_total_number_-1] = fingers.Finger3/6800*80*M_PI/180;
-    }
-
 
     // Joint velocities
     KinovaAngles current_vels;
@@ -607,18 +614,6 @@ void KinovaArm::publishJointAngles(void)
     joint_state.velocity[1] = current_vels.Actuator2;
     joint_state.velocity[2] = current_vels.Actuator3;
     joint_state.velocity[3] = current_vels.Actuator4;
-    // no velocity info for fingers
-    if(finger_number_==2)
-    {
-        joint_state.velocity[joint_total_number_-2] = 0;
-        joint_state.velocity[joint_total_number_-1] = 0;
-    }
-    else if(finger_number_==3)
-    {
-        joint_state.velocity[joint_total_number_-3] = 0;
-        joint_state.velocity[joint_total_number_-2] = 0;
-        joint_state.velocity[joint_total_number_-1] = 0;
-    }
 
     if (arm_joint_number_ >= 6)
     {
@@ -660,18 +655,6 @@ void KinovaArm::publishJointAngles(void)
     joint_state.effort[1] = joint_tqs.Actuator2;
     joint_state.effort[2] = joint_tqs.Actuator3;
     joint_state.effort[3] = joint_tqs.Actuator4;
-    // no effort info for fingers
-    if(finger_number_==2)
-    {
-        joint_state.effort[joint_total_number_-2] = 0;
-        joint_state.effort[joint_total_number_-1] = 0;
-    }
-    else if(finger_number_==3)
-    {
-        joint_state.effort[joint_total_number_-3] = 0;
-        joint_state.effort[joint_total_number_-2] = 0;
-        joint_state.effort[joint_total_number_-1] = 0;
-    }
     if (arm_joint_number_ >= 6)
     {
         joint_state.effort[4] = joint_tqs.Actuator5;
@@ -682,8 +665,53 @@ void KinovaArm::publishJointAngles(void)
         joint_state.effort[6] = joint_tqs.Actuator7;
     }
 
+    if (kinova_gripper_)
+    {
+        FingerAngles fingers;
+        kinova_comm_.getFingerPositions(fingers);
+
+        if(finger_number_==2)
+        {
+          joint_state.position[joint_total_number_-2] = fingers.Finger1/6800*80*M_PI/180;
+          joint_state.position[joint_total_number_-1] = fingers.Finger2/6800*80*M_PI/180;
+        }
+        else if(finger_number_==3)
+        {
+          joint_state.position[joint_total_number_-3] = fingers.Finger1/6800*80*M_PI/180;
+          joint_state.position[joint_total_number_-2] = fingers.Finger2/6800*80*M_PI/180;
+          joint_state.position[joint_total_number_-1] = fingers.Finger3/6800*80*M_PI/180;
+        }
+
+        // no velocity info for fingers
+        if(finger_number_==2)
+        {
+            joint_state.velocity[joint_total_number_-2] = 0;
+            joint_state.velocity[joint_total_number_-1] = 0;
+        }
+        else if(finger_number_==3)
+        {
+            joint_state.velocity[joint_total_number_-3] = 0;
+            joint_state.velocity[joint_total_number_-2] = 0;
+            joint_state.velocity[joint_total_number_-1] = 0;
+        }
+
+        // no effort info for fingers
+        if(finger_number_==2)
+        {
+            joint_state.effort[joint_total_number_-2] = 0;
+            joint_state.effort[joint_total_number_-1] = 0;
+        }
+        else if(finger_number_==3)
+        {
+            joint_state.effort[joint_total_number_-3] = 0;
+            joint_state.effort[joint_total_number_-2] = 0;
+            joint_state.effort[joint_total_number_-1] = 0;
+        }
+    }
+
     joint_angles_publisher_.publish(kinova_angles);
-    joint_command_publisher_.publish(joint_command_msg);
+    //TODO: is this necessary?
+    //joint_command_publisher_.publish(joint_command_msg);
     joint_state_publisher_.publish(joint_state);
 
 }
@@ -698,16 +726,20 @@ void KinovaArm::publishToolPosition(void)
     kinova_comm_.getCartesianPosition(pose);
 
 
+    //TODO: is this necessary?
+    /*
     CartesianPosition cartesian_command;
     kinova_comm_.getCartesianCommand(cartesian_command);
     kinova_msgs::KinovaPose cartesian_command_msg = KinovaPose(cartesian_command.Coordinates).constructKinovaPoseMsg();
+    */
 
     current_position.pose            = pose.constructPoseMsg();
     current_position.header.stamp    = ros::Time::now();
     current_position.header.frame_id = tf_prefix_ + "link_base";
 
     tool_position_publisher_.publish(current_position);
-    cartesian_command_publisher_.publish(cartesian_command_msg);
+    //TODO: is this necessary?
+    //cartesian_command_publisher_.publish(cartesian_command_msg);
 }
 
 /*!
@@ -745,12 +777,24 @@ void KinovaArm::publishFingerPosition(void)
     finger_position_publisher_.publish(fingers.constructFingersMsg());
 }
 
-void KinovaArm::statusTimer(const ros::TimerEvent&)
+void KinovaArm::statusTimerJointStates(const ros::TimerEvent&)
 {
     publishJointAngles();
-    publishToolPosition();
-    publishToolWrench();
-    publishFingerPosition();   
+}
+
+void KinovaArm::statusTimerToolPosition(const ros::TimerEvent&)
+{
+  publishToolPosition();
+}
+
+void KinovaArm::statusTimerToolWrench(const ros::TimerEvent&)
+{
+  publishToolWrench();
+}
+
+void KinovaArm::statusTimerFingerStates(const ros::TimerEvent&)
+{
+  publishFingerPosition();
 }
 
 }  // namespace kinova
