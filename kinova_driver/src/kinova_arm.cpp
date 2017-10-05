@@ -250,8 +250,8 @@ KinovaArm::KinovaArm(KinovaComm &arm, const ros::NodeHandle &nodeHandle, const s
 
     status_timer_joint_states_ = node_handle_.createTimer(ros::Duration(status_interval_seconds_),
                                            &KinovaArm::statusTimerJointStates, this);
-    status_timer_tool_position_ = node_handle_.createTimer(ros::Duration(status_interval_seconds_),
-                                             &KinovaArm::statusTimerToolPosition, this);
+    status_timer_gf_torques_ = node_handle_.createTimer(ros::Duration(status_interval_seconds_),
+                                             &KinovaArm::statusTimerGFTorques, this);
     status_timer_tool_wrench_ = node_handle_.createTimer(ros::Duration(status_interval_seconds_),
                                              &KinovaArm::statusTimerToolWrench, this);
     if (kinova_gripper_)
@@ -569,24 +569,10 @@ void KinovaArm::cartesianVelocityCallback(const kinova_msgs::PoseVelocityConstPt
  */
 void KinovaArm::publishJointAngles(void)
 {
-    /*
-    if (arm_joint_number_ != 4 && arm_joint_number_ != 6 && arm_joint_number_ != 7)
-    {
-         ROS_WARN_ONCE("The joint_state publisher only supports 4, 6 and 7 DOF for now.: %d", arm_joint_number_);
-    }
-    */
-
     // Query arm for current joint angles
     KinovaAngles current_angles;
     kinova_comm_.getJointAngles(current_angles);
-    //kinova_msgs::JointAngles kinova_angles = current_angles.constructAnglesMsg();
 
-    //TODO: is this necessary?
-    /*
-    AngularPosition joint_command;
-    kinova_comm_.getAngularCommand(joint_command);
-    kinova_msgs::JointAngles joint_command_msg = KinovaAngles(joint_command.Actuators).constructAnglesMsg();
-    */
 
     sensor_msgs::JointState joint_state;
     joint_state.name = joint_names_;
@@ -642,15 +628,9 @@ void KinovaArm::publishJointAngles(void)
 
 
     // Joint torques (effort)
-    KinovaAngles joint_tqs, gf_joint_tqs;
-    bool gravity_comp;
-    node_handle_.param("torque_parameters/publish_torque_with_gravity_compensation", gravity_comp, false);
-    //if (gravity_comp==true)
-    kinova_comm_.getGravityCompensatedTorques(gf_joint_tqs);
-    //else
+    KinovaAngles joint_tqs;
     kinova_comm_.getJointTorques(joint_tqs);
     joint_torque_publisher_.publish(joint_tqs.constructAnglesMsg());
-    gf_joint_torque_publisher_.publish(gf_joint_tqs.constructAnglesMsg());
 
     joint_state.effort.resize(joint_total_number_);
     joint_state.effort[0] = joint_tqs.Actuator1;
@@ -711,9 +691,6 @@ void KinovaArm::publishJointAngles(void)
         }
     }
 
-    //joint_angles_publisher_.publish(kinova_angles);
-    //TODO: is this necessary?
-    //joint_command_publisher_.publish(joint_command_msg);
     joint_state_publisher_.publish(joint_state);
 
 }
@@ -721,27 +698,11 @@ void KinovaArm::publishJointAngles(void)
 /*!
  * \brief Publishes the current cartesian coordinates
  */
-void KinovaArm::publishToolPosition(void)
+void KinovaArm::publishGFTorques(void)
 {
-    KinovaPose pose;
-    geometry_msgs::PoseStamped current_position;
-    kinova_comm_.getCartesianPosition(pose);
-
-
-    //TODO: is this necessary?
-    /*
-    CartesianPosition cartesian_command;
-    kinova_comm_.getCartesianCommand(cartesian_command);
-    kinova_msgs::KinovaPose cartesian_command_msg = KinovaPose(cartesian_command.Coordinates).constructKinovaPoseMsg();
-    */
-
-    current_position.pose            = pose.constructPoseMsg();
-    current_position.header.stamp    = ros::Time::now();
-    current_position.header.frame_id = tf_prefix_ + "link_base";
-
-    tool_position_publisher_.publish(current_position);
-    //TODO: is this necessary?
-    //cartesian_command_publisher_.publish(cartesian_command_msg);
+    KinovaAngles gf_joint_tqs;
+    kinova_comm_.getGravityCompensatedTorques(gf_joint_tqs);
+    gf_joint_torque_publisher_.publish(gf_joint_tqs.constructAnglesMsg());
 }
 
 /*!
@@ -784,9 +745,9 @@ void KinovaArm::statusTimerJointStates(const ros::TimerEvent&)
     publishJointAngles();
 }
 
-void KinovaArm::statusTimerToolPosition(const ros::TimerEvent&)
+void KinovaArm::statusTimerGFTorques(const ros::TimerEvent&)
 {
-  publishToolPosition();
+  publishGFTorques();
 }
 
 void KinovaArm::statusTimerToolWrench(const ros::TimerEvent&)

@@ -113,12 +113,12 @@ class KinovaArm
     void cartesianVelocityTimer(const ros::TimerEvent&);
     void jointVelocityTimer(const ros::TimerEvent&);
     void statusTimerJointStates(const ros::TimerEvent&);
-    void statusTimerToolPosition(const ros::TimerEvent&);
+    void statusTimerGFTorques(const ros::TimerEvent&);
     void statusTimerToolWrench(const ros::TimerEvent&);
     void statusTimerFingerStates(const ros::TimerEvent&);
 
     void publishJointAngles(void);
-    void publishToolPosition(void);
+    void publishGFTorques(void);
     void publishToolWrench(void);
     void publishFingerPosition(void);   
 
@@ -165,7 +165,7 @@ class KinovaArm
 
     // Timers for control loops
     ros::Timer status_timer_joint_states_;
-    ros::Timer status_timer_tool_position_;
+    ros::Timer status_timer_gf_torques_;
     ros::Timer status_timer_tool_wrench_;
     ros::Timer status_timer_finger_states_;
 
