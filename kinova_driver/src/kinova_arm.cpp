@@ -206,8 +206,8 @@ KinovaArm::KinovaArm(KinovaComm &arm, const ros::NodeHandle &nodeHandle, const s
              &KinovaArm::setTorqueControlParametersService,this);
 
     /* Set up Publishers */
-    joint_angles_publisher_ = node_handle_.advertise<kinova_msgs::JointAngles>
-            ("out/joint_angles", 2);
+    //joint_angles_publisher_ = node_handle_.advertise<kinova_msgs::JointAngles>
+    //        ("out/joint_angles", 2);
     joint_torque_publisher_ = node_handle_.advertise<kinova_msgs::JointAngles>
             ("out/joint_torques", 2);
     gf_joint_torque_publisher_ = node_handle_.advertise<kinova_msgs::JointAngles>
@@ -569,15 +569,17 @@ void KinovaArm::cartesianVelocityCallback(const kinova_msgs::PoseVelocityConstPt
  */
 void KinovaArm::publishJointAngles(void)
 {
+    /*
     if (arm_joint_number_ != 4 && arm_joint_number_ != 6 && arm_joint_number_ != 7)
     {
          ROS_WARN_ONCE("The joint_state publisher only supports 4, 6 and 7 DOF for now.: %d", arm_joint_number_);
     }
+    */
 
     // Query arm for current joint angles
     KinovaAngles current_angles;
     kinova_comm_.getJointAngles(current_angles);
-    kinova_msgs::JointAngles kinova_angles = current_angles.constructAnglesMsg();
+    //kinova_msgs::JointAngles kinova_angles = current_angles.constructAnglesMsg();
 
     //TODO: is this necessary?
     /*
@@ -592,18 +594,18 @@ void KinovaArm::publishJointAngles(void)
 
     // Transform from Kinova DH algorithm to physical angles in radians, then place into vector array
     joint_state.position.resize(joint_total_number_);
-    joint_state.position[0] = kinova_angles.joint1 * M_PI/180;
-    joint_state.position[1] = kinova_angles.joint2 * M_PI/180;
-    joint_state.position[2] = kinova_angles.joint3 * M_PI/180;
-    joint_state.position[3] = kinova_angles.joint4 * M_PI/180;
+    joint_state.position[0] = current_angles.Actuator1 * M_PI/180;
+    joint_state.position[1] = current_angles.Actuator2 * M_PI/180;
+    joint_state.position[2] = current_angles.Actuator3 * M_PI/180;
+    joint_state.position[3] = current_angles.Actuator4 * M_PI/180;
     if (arm_joint_number_ >= 6)
     {
-        joint_state.position[4] = kinova_angles.joint5 * M_PI/180;
-        joint_state.position[5] = kinova_angles.joint6 * M_PI/180;
+        joint_state.position[4] = current_angles.Actuator5 * M_PI/180;
+        joint_state.position[5] = current_angles.Actuator6 * M_PI/180;
     }
     if (arm_joint_number_ == 7)
     {
-         joint_state.position[6] = kinova_angles.joint7 * M_PI/180;
+         joint_state.position[6] = current_angles.Actuator7 * M_PI/180;
     }
 
     // Joint velocities
@@ -709,7 +711,7 @@ void KinovaArm::publishJointAngles(void)
         }
     }
 
-    joint_angles_publisher_.publish(kinova_angles);
+    //joint_angles_publisher_.publish(kinova_angles);
     //TODO: is this necessary?
     //joint_command_publisher_.publish(joint_command_msg);
     joint_state_publisher_.publish(joint_state);
