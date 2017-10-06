@@ -13,13 +13,9 @@
     <rosparam file="$(find kinova_bringup)/launch/config/robot_parameters.yaml" command="load" />
     <param name="serial_number" value="$(arg kinova_robotSerial)" />   
     <param name="robot_name" value="$(arg kinova_robotName)" />   
-    <param name="robot_type" value="$(arg kinova_robotType)" />   
-  </node>
-
-  <!-- Joint state publisher since we typically say "use_urdf" to false -->
-  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
-    <param name="use_gui" value="false" />
-    <rosparam param="source_list">[j2s7s300_driver/out/joint_state, gripper/joint_states, vector/joint_states]</rosparam>
+    <param name="robot_type" value="$(arg kinova_robotType)" />
+    <param name="status_interval_seconds" value="0.01" />
+    <param name="kinova_gripper" value="False" />
   </node>
 
   <!--
