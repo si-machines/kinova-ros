@@ -186,6 +186,8 @@ class KinovaArm
 
 
     double status_interval_seconds_;
+    double status_interval_seconds_torques_; //separate timer for joint torques not in joint_states
+    bool gf_effort_; // if set true, joint_state publisher fills in effort with gravity compenstated effort
     double finger_conv_ratio_;
     bool convert_joint_velocities_;
 
