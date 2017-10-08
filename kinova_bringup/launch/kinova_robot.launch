@@ -15,7 +15,15 @@
     <param name="robot_name" value="$(arg kinova_robotName)" />   
     <param name="robot_type" value="$(arg kinova_robotType)" />
     <param name="status_interval_seconds" value="0.01" />
+    <!-- WARN: we have a sparate status for joint torques being published. Assume they are not
+	as critical as the torques selected in joint states, etc.
+	This value cannot be smaller than 0.02 to guarantee
+	100hz publishing for joint states and velocity information -->
+    <param name="status_interval_seconds_torques" value="0.02" />
     <param name="kinova_gripper" value="False" />
+    <!-- This flag sets whether joint_states topic containts gravity compensated effort. For the effort
+	 not in joint_states, it is published in its own topic at a separate rate -->
+    <param name="gf_effort" value="True" />
   </node>
 
   <!--

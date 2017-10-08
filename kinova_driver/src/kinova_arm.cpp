@@ -209,19 +209,19 @@ KinovaArm::KinovaArm(KinovaComm &arm, const ros::NodeHandle &nodeHandle, const s
     //joint_angles_publisher_ = node_handle_.advertise<kinova_msgs::JointAngles>
     //        ("out/joint_angles", 2);
     joint_torque_publisher_ = node_handle_.advertise<kinova_msgs::JointAngles>
-            ("out/joint_torques", 2);
+            ("out/joint_torques", 1);
     gf_joint_torque_publisher_ = node_handle_.advertise<kinova_msgs::JointAngles>
-            ("out/gf_joint_torques", 2);
+            ("out/gf_joint_torques", 1);
     joint_state_publisher_ = node_handle_.advertise<sensor_msgs::JointState>
-            ("out/joint_state", 2);
+            ("out/joint_state", 1);
     tool_position_publisher_ = node_handle_.advertise<geometry_msgs::PoseStamped>
-            ("out/tool_pose", 2);
+            ("out/tool_pose", 1);
     tool_wrench_publisher_ = node_handle_.advertise<geometry_msgs::WrenchStamped>
-            ("out/tool_wrench", 2);
+            ("out/tool_wrench", 1);
     if (kinova_gripper_)
     {
         finger_position_publisher_ = node_handle_.advertise<kinova_msgs::FingerPosition>
-                ("out/finger_position", 2);
+                ("out/finger_position", 1);
     }
 
     // Publish last command for relative motion (read current position cause arm drop)
@@ -238,7 +238,10 @@ KinovaArm::KinovaArm(KinovaComm &arm, const ros::NodeHandle &nodeHandle, const s
     cartesian_force_subscriber_ = node_handle_.subscribe("in/cartesian_force", 1,
                                   &KinovaArm::forceSubscriberCallback, this);
 
-    node_handle_.param<double>("status_interval_seconds", status_interval_seconds_, 0.1);
+    node_handle_.param<double>("status_interval_seconds", status_interval_seconds_, 0.01);
+    node_handle_.param<double>("status_interval_seconds_torques", status_interval_seconds_torques_, 0.02);
+    // if set true, joint_state publisher fills in effort with gravity compenstated effort
+    node_handle_.param<bool>("gf_effort", gf_effort_, true);
 
     ROS_INFO("Status interval (seconds): %f", status_interval_seconds_);
 
@@ -250,10 +253,11 @@ KinovaArm::KinovaArm(KinovaComm &arm, const ros::NodeHandle &nodeHandle, const s
 
     status_timer_joint_states_ = node_handle_.createTimer(ros::Duration(status_interval_seconds_),
                                            &KinovaArm::statusTimerJointStates, this);
-    status_timer_gf_torques_ = node_handle_.createTimer(ros::Duration(status_interval_seconds_),
-                                             &KinovaArm::statusTimerGFTorques, this);
     status_timer_tool_wrench_ = node_handle_.createTimer(ros::Duration(status_interval_seconds_),
                                              &KinovaArm::statusTimerToolWrench, this);
+    // WARN: assume not critical to so put on a separate timer than more critical values
+    status_timer_gf_torques_ = node_handle_.createTimer(ros::Duration(status_interval_seconds_torques_),
+                                             &KinovaArm::statusTimerGFTorques, this);
     if (kinova_gripper_)
     {
         status_timer_finger_states_ = node_handle_.createTimer(ros::Duration(status_interval_seconds_),
@@ -629,8 +633,14 @@ void KinovaArm::publishJointAngles(void)
 
     // Joint torques (effort)
     KinovaAngles joint_tqs;
-    kinova_comm_.getJointTorques(joint_tqs);
-    joint_torque_publisher_.publish(joint_tqs.constructAnglesMsg());
+    // Check if we want gravity compensated torques or not
+    if (gf_effort_)
+    {
+        kinova_comm_.getGravityCompensatedTorques(joint_tqs);
+    } else {
+        kinova_comm_.getJointTorques(joint_tqs);
+    }
+    //joint_torque_publisher_.publish(joint_tqs.constructAnglesMsg());
 
     joint_state.effort.resize(joint_total_number_);
     joint_state.effort[0] = joint_tqs.Actuator1;
@@ -701,8 +711,18 @@ void KinovaArm::publishJointAngles(void)
 void KinovaArm::publishGFTorques(void)
 {
     KinovaAngles gf_joint_tqs;
-    kinova_comm_.getGravityCompensatedTorques(gf_joint_tqs);
-    gf_joint_torque_publisher_.publish(gf_joint_tqs.constructAnglesMsg());
+    // Check if we want gravity compensated torques or not
+    // This seems backwards because the flag is for the joint state publisher
+    // If the joint state publisher is True to gravity comp, then this publisher
+    // publishes non-gravity compenstated torques
+    if (!gf_effort_)
+    {
+        kinova_comm_.getGravityCompensatedTorques(gf_joint_tqs);
+        gf_joint_torque_publisher_.publish(gf_joint_tqs.constructAnglesMsg());
+    } else {
+        kinova_comm_.getJointTorques(gf_joint_tqs);
+        joint_torque_publisher_.publish(gf_joint_tqs.constructAnglesMsg());
+    }
 }
 
 /*!
