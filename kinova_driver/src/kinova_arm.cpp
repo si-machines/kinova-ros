@@ -290,7 +290,7 @@ bool KinovaArm::setTorqueControlModeService(kinova_msgs::SetTorqueControlMode::R
 {
     kinova_comm_.SetTorqueControlState(req.state);
 
-    bool is_prentice;
+    /*bool is_prentice;
     node_handle_.param("torque_parameters/is_prentice",
                               is_prentice,false);
     if (is_prentice == true)
@@ -301,7 +301,7 @@ bool KinovaArm::setTorqueControlModeService(kinova_msgs::SetTorqueControlMode::R
                 GravityVector[1] = -9.81;// 0;
                 GravityVector[2] = 0;// 0;
                 kinova_comm_.setGravityVector(GravityVector);
-        }
+        }*/
 
 }
 
