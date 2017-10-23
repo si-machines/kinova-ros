@@ -216,12 +216,28 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
     timePoints[i] = timePoints[i - 1] + maxTime * TIME_SCALING_FACTOR;
   }
 
+  // Spline the given points to smooth the trajectory
   vector<ecl::SmoothLinearSpline> splines;
   splines.resize(NUM_JACO_JOINTS);
-  for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
+  try
   {
-    ecl::SmoothLinearSpline tempSpline(timePoints, jointPoints[i], maxCurvature);
-    splines.at(i) = tempSpline;
+    for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
+    {
+      ecl::SmoothLinearSpline tempSpline(timePoints, jointPoints[i], maxCurvature);
+      splines.at(i) = tempSpline;
+    }
+  }
+  catch (...) // This catches ALL exceptions
+  {
+    
+    ROS_WARN("WARNING: Performing cubic spline rather than smooth linear because of crash");
+    vector<ecl::CubicSpline> splines;
+    splines.resize(NUM_JACO_JOINTS);
+    for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
+    {
+      ecl::CubicSpline tempSpline = ecl::CubicSpline::Natural(timePoints, jointPoints[i]);
+      splines.at(i) = tempSpline;
+    }
   }
 
   //control loop
