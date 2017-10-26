@@ -219,6 +219,11 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
   // Spline the given points to smooth the trajectory
   vector<ecl::SmoothLinearSpline> splines;
   splines.resize(NUM_JACO_JOINTS);
+
+  // Setup cubic storage in case
+  vector<ecl::CubicSpline> cubic_splines;
+  cubic_splines.resize(NUM_JACO_JOINTS);
+  cubic_flag_=false;
   try
   {
     for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
@@ -230,13 +235,12 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
   catch (...) // This catches ALL exceptions
   {
     
+    cubic_flag_= true;
     ROS_WARN("WARNING: Performing cubic spline rather than smooth linear because of crash");
-    vector<ecl::CubicSpline> splines;
-    splines.resize(NUM_JACO_JOINTS);
     for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
     {
       ecl::CubicSpline tempSpline = ecl::CubicSpline::Natural(timePoints, jointPoints[i]);
-      splines.at(i) = tempSpline;
+      cubic_splines.at(i) = tempSpline;
     }
   }
 
@@ -360,7 +364,19 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
         for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
         {
           currentPoint = simplify_angle(current_joint_pos[i]);
-          error[i] = nearest_equivalent(simplify_angle((splines.at(i))(timePoints.at(timePoints.size() - 1))),
+
+          // Check if we're using a cubic or a linear spline
+          double splineValue;
+          if (cubic_flag_)
+          {
+            splineValue = (cubic_splines.at(i))(timePoints.at(timePoints.size() - 1));
+          }
+          else
+          {
+            splineValue = (splines.at(i))(timePoints.at(timePoints.size() - 1));
+          }
+          // Now generate the value
+          error[i] = nearest_equivalent(simplify_angle(splineValue),
                                         currentPoint) - currentPoint;
           totalError += fabs(error[i]);
         }
@@ -398,7 +414,17 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
         for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
         {
           currentPoint = simplify_angle(current_joint_pos[i]);
-          error[i] = nearest_equivalent(simplify_angle((splines.at(i))(t)), currentPoint) - currentPoint;
+          // Check if we're using a cubic or a linear spline
+          double splineValue;
+          if (cubic_flag_)
+          {
+            splineValue = (cubic_splines.at(i))(t);
+          }
+          else
+          {
+            splineValue = (splines.at(i))(t);
+          }
+          error[i] = nearest_equivalent(simplify_angle(splineValue), currentPoint) - currentPoint;
         }
       }
 
