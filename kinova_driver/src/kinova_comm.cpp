@@ -76,6 +76,7 @@ KinovaComm::KinovaComm(const ros::NodeHandle& node_handle,
     EthernetCommConfig ethernet_settings;
     std::string local_IP,subnet_mask;
     int local_cmd_port,local_bcast_port;
+    node_handle.param<bool>("is_arm_vertical", is_arm_vertical, true);
     node_handle.getParam("ethernet/local_machine_IP", local_IP);
     node_handle.getParam("ethernet/subnet_mask", subnet_mask);
     node_handle.getParam("ethernet/local_cmd_port", local_cmd_port);
@@ -284,9 +285,19 @@ void KinovaComm::startForceControl()
 {
     boost::recursive_mutex::scoped_lock lock(api_mutex_);
     float GravityVector[3];
-    GravityVector[0] = 0;// -9.81; 
-    GravityVector[1] = -9.81;// 0;
-    GravityVector[2] = 0;// 0;
+    //set gravity in Z
+    if(is_arm_vertical){
+    	GravityVector[0] = 0; 
+    	GravityVector[1] = 0;
+    	GravityVector[2] = -9.81;
+    }
+    else{
+    	GravityVector[0] = -9.81; 
+    	GravityVector[1] = 0;
+    	GravityVector[2] = 0;
+ 
+    }
+
     setGravityVector(GravityVector);
     int result = kinova_api_.startForceControl();
     if (result != NO_ERROR_KINOVA)
@@ -1625,9 +1636,16 @@ void KinovaComm::setGravCompParams()
 {
     ROS_INFO("Setting gravity vector");
     float GravityVector[3];
-    GravityVector[0] = 0;// -9.81; 
-    GravityVector[1] = -9.81;// 0;
-    GravityVector[2] = 0;// 0;
+    if(is_arm_vertical){
+    	GravityVector[0] = 0; 
+    	GravityVector[1] = 0;
+    	GravityVector[2] = -9.81;
+    }
+    else{
+     	GravityVector[0] = -9.81; 
+    	GravityVector[1] = 0;
+    	GravityVector[2] = 0;
+    }
     setGravityVector(GravityVector);
 
     kinova_api_.setTorqueControlType(DIRECTTORQUE);

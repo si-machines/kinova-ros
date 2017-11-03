@@ -121,7 +121,7 @@ class KinovaArm
     void publishGFTorques(void);
     void publishToolWrench(void);
     void publishFingerPosition(void);   
-
+    void loadInitialGravParams();
     tf::TransformListener tf_listener_;
     ros::NodeHandle node_handle_;
     KinovaComm &kinova_comm_;
