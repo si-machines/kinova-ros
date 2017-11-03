@@ -187,6 +187,7 @@ class KinovaComm
     boost::recursive_mutex& api_mutex_;
     kinova::KinovaAPI kinova_api_;
     bool is_software_stop_;
+    bool is_arm_vertical;
     int num_fingers_;
     int num_joints_;
     int robot_type_;

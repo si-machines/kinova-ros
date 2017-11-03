@@ -239,6 +239,9 @@ KinovaArm::KinovaArm(KinovaComm &arm, const ros::NodeHandle &nodeHandle, const s
     status_timer_ = node_handle_.createTimer(ros::Duration(status_interval_seconds_),
                                            &KinovaArm::statusTimer, this);
 
+    //this basically calls the /loadTorqueParameters service on startup
+    this->loadInitialGravParams();
+
     ROS_INFO("The arm is ready to use.");
 }
 
@@ -247,7 +250,43 @@ KinovaArm::~KinovaArm()
 {
 }
 
+void KinovaArm::loadInitialGravParams(){
+    std::vector<float> payload;
+    if (node_handle_.getParam("payload", payload))
+    {
+        kinova_comm_.setPayload(payload);
+    }
 
+    std::vector<float> min_torque, max_torque;
+    if (node_handle_.getParam("torque_parameters/torque_min", min_torque)
+          && node_handle_.getParam("torque_parameters/torque_max", max_torque))
+    {
+        AngularInfo min_torque_info,max_torque_info;
+
+        //since fist 7 members of the struct are float we assume no padding
+        //and use float pointer to access struct elements
+        float *min_torque_actuator = &(min_torque_info.Actuator1);
+        float *max_torque_actuator = &(max_torque_info.Actuator1);
+        for (int i = 0; i<min_torque.size(); i++)
+        {
+            min_torque_actuator[i] = min_torque.at(i);
+            max_torque_actuator[i] = max_torque.at(i);
+        }
+        kinova_comm_.setJointTorqueMinMax(min_torque_info,max_torque_info);
+    }
+    std::vector<float> com_parameters;
+    if (node_handle_.getParam("torque_parameters/com_parameters", com_parameters))
+    {
+        ROS_INFO("Getting COM Params");
+        bool use_estimated_COM;
+        node_handle_.param("torque_parameters/use_estimated_COM_parameters",
+                              use_estimated_COM,true);
+        if (use_estimated_COM == true)
+            kinova_comm_.setRobotCOMParam(OPTIMAL,com_parameters);
+        else
+            kinova_comm_.setRobotCOMParam(MANUAL_INPUT,com_parameters);
+    }
+}
 bool KinovaArm::homeArmServiceCallback(kinova_msgs::HomeArm::Request &req, kinova_msgs::HomeArm::Response &res)
 {
     kinova_comm_.homeArm();
@@ -265,18 +304,24 @@ bool KinovaArm::setTorqueControlModeService(kinova_msgs::SetTorqueControlMode::R
 {
     kinova_comm_.SetTorqueControlState(req.state);
 
-    bool is_prentice;
-    node_handle_.param("torque_parameters/is_prentice",
-                              is_prentice,false);
-    if (is_prentice == true)
-        {
-                // Gravity vector in -Y
-                float GravityVector[3];
-                GravityVector[0] = 0;// -9.81; 
-                GravityVector[1] = -9.81;// 0;
-                GravityVector[2] = 0;// 0;
-                kinova_comm_.setGravityVector(GravityVector);
-        }
+    bool is_arm_vertical;
+    node_handle_.param("is_arm_vertical",
+                              is_arm_vertical,true);
+    if(is_arm_vertical){
+	float GravityVector[3];
+        GravityVector[0] = 0;
+        GravityVector[1] = 0;
+        GravityVector[2] = -9.81;
+        kinova_comm_.setGravityVector(GravityVector);
+    }
+    else{
+          // Gravity vector in -Y. (Prentice mounting)
+          float GravityVector[3];
+          GravityVector[0] = 0;// -9.81; 
+          GravityVector[1] = -9.81;// 0;
+          GravityVector[2] = 0;// 0;
+          kinova_comm_.setGravityVector(GravityVector);
+    }
 
 }
 

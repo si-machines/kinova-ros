@@ -113,11 +113,13 @@ class KinovaArm
     void cartesianVelocityTimer(const ros::TimerEvent&);
     void jointVelocityTimer(const ros::TimerEvent&);
     void statusTimer(const ros::TimerEvent&);
-
+    
     void publishJointAngles(void);
     void publishToolPosition(void);
     void publishToolWrench(void);
     void publishFingerPosition(void);   
+
+    void loadInitialGravParams();
 
     tf::TransformListener tf_listener_;
     ros::NodeHandle node_handle_;

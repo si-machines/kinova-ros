@@ -8,23 +8,26 @@ jointSpeedLimitParameter1: 10
 jointSpeedLimitParameter2: 20
 
 # payload: [COM COMx COMy COMz]
-payload: [0.45, 0, 0, 0]
+payload: [0.6, 0.0, 0.0, 0]
 
 connection_type: USB #Ethernet
 
 # Ethernet connection parameters
 ethernet: {
-  local_machine_IP: 143.215.128.118,
+  local_machine_IP: 10.66.171.24,
   subnet_mask: 255.255.255.0,
   local_cmd_port: 25000,
   local_broadcast_port: 25025
 }
 
+# Gravity parameters based on arm mounting position
+is_arm_vertical: true
+
 #Torque control parameters
 #Do not change these parameters unless you want to change torque control behavior
 torque_parameters: {
-      publish_torque_with_gravity_compensation: false,
-      use_estimated_COM_parameters: true,
+      publish_torque_with_gravity_compensation: true,
+      use_estimated_COM_parameters: false,
     # if torque min/max sepecified, all min/max values need to be specified
     #  torque_min: [80, 80, 80, 80, 80, 80, 80],
     #  torque_max: [90, 90, 90, 90, 90, 90, 90],
@@ -33,9 +36,12 @@ torque_parameters: {
     # COM parameters
     # order [m1,m2,...,m7,x1,x2,...,x7,y1,y2,...y7,z1,z2,...z7]
     # com_parameters: [0,0,0,0,0,0,0, 0,0,0,0,0,0,0, 0,0,0,0,0,0,0, 0,0,0,0,0,0,0]
+      com_parametesr: [-0.00951158,-1.51002,-0.0280768,-0.0521875,0.00303779,-0.654485,0.0022891,-0.00324771,0.0107416,-0.227445,-9.48868e-05,-0.00834449,0.354482,-0.0499593,-0.157997,-0.0895242,-0.0434689,-0.0799657,-0.0397365],
+    #com_parameters: [-0.00946664,-1.52411,-0.0330478,-0.0534555,-0.00093876,-0.659436,0.00502729,-0.00173746,0.0100212,-0.229559,0.00264733,-0.00952419,-0.2701,0.0958638,0.000877471,-0.152205,-0.0585752,-0.0433299,0.160587],
     #com_parameters: [0.0167917,-1.52641,-0.00190493,-0.0562204,-0.0359773,-0.672723,-0.000490668, -0.000840962,0.0099548,-0.22046,0.00693445,0.00469562,0.583775,-1.04688, -0.435625,1.15717,0.0823697,0.0738105,0.101988],
     #com_parameters: [-0.00677166,-1.53214,-0.00767181,-0.0665326,-0.0239217,-0.658705,0.000637761,0.000503564,0.00923793,-0.223449,-0.00262875,-0.00262086,0.0674497,0.785769,0.372812,0.713018,-0.0879828,0.200672,0.0276613],
-    com_parameters: [0.00406128,-1.50656,-0.00575732,-0.0758144,-0.0168458,-0.651942,0.00230488,0.00234403,0.00891879,-0.221578,-0.00279286,-0.0164935,0.332419,0.600664,0.52553,0.672386,0.0856528,0.308239,0.0408748],
-    is_prentice: true
+    #com_parameters: [0.00406128,-1.50656,-0.00575732,-0.0758144,-0.0168458,-0.651942,0.00230488,0.00234403,0.00891879,-0.221578,-0.00279286,-0.0164935,0.332419,0.600664,0.52553,0.672386,0.0856528,0.308239,0.0408748],
+    #com_parameters: [0.0167917,-1.52641,-0.00190493,-0.0562204,-0.0359773,-0.672723,-0.000490668, -0.000840962,0.0099548,-0.22046,0.00693445,0.00469562,0.583775,-1.04688, -0.435625,1.15717,0.0823697,0.0738105,0.101988],
+      is_prentice: false
  
 }
