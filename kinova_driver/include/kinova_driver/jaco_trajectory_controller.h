@@ -15,9 +15,8 @@
 
 #define NUM_JACO_JOINTS 7
 
-#define LARGE_ACTUATOR_VELOCITY 0.8378 //maximum velocity of large actuator (joints 1-3) (rad/s)
-#define SMALL_ACTUATOR_VELOCITY 1.0472 //maximum velocity of small actuator (joints 4-6) (rad/s)
-#define TIME_SCALING_FACTOR 1.75 //keep the trajectory at a followable speed
+#define LARGE_ACTUATOR_VELOCITY 0.628 //maximum velocity of large actuator (joints 1-4) (rad/s)
+#define SMALL_ACTUATOR_VELOCITY 0.838 //maximum velocity of small actuator (joints 5-7) (rad/s)
 
 #define DEG_TO_RAD (M_PI/180)
 #define RAD_TO_DEG (180/M_PI)
@@ -25,7 +24,7 @@
 //gains for trajectory follower
 #define KP 225.0
 #define KV 10.0
-#define ERROR_THRESHOLD .03 //threshold in radians for combined joint error to consider motion a success
+#define ERROR_THRESHOLD .001 //threshold in radians for error at each joint to consider motion a success
 
 class JacoTrajectoryController
 {

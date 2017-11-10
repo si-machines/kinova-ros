@@ -47,6 +47,7 @@
     </node>
     <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
       <param name="use_gui" value="false" />
+      <param name="rate" value="100" />
       <rosparam param="source_list">[j2s7s300_driver/out/joint_state, gripper/joint_states, vector/joint_states]</rosparam>
     </node>
     

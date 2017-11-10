@@ -202,9 +202,9 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
       //calculate approximate time required to move to the next position
       float time = fabs(trajectoryPoints[j][i] - prevPoint[j]);
       if (j <= 3)
-        time /= LARGE_ACTUATOR_VELOCITY;
+        time /= (LARGE_ACTUATOR_VELOCITY*0.9);  // run slightly below max speed
       else
-        time /= SMALL_ACTUATOR_VELOCITY;
+        time /= (SMALL_ACTUATOR_VELOCITY*0.9);  // run slightly below max speed
 
       if (time > maxTime)
         maxTime = time;
@@ -213,7 +213,7 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
       prevPoint[j] = trajectoryPoints[j][i];
     }
 
-    timePoints[i] = timePoints[i - 1] + maxTime * TIME_SCALING_FACTOR;
+    timePoints[i] = timePoints[i - 1] + maxTime;
   }
 
   vector<ecl::SmoothLinearSpline> splines;
@@ -260,14 +260,16 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
     // Check the total error to determine if the trajectory finished
     totalError = 1.0;
     float prevError = 0.0;
-    while (abs(totalError -prevError) > 0.001 && totalError > 0.03){
+    bool jointError = true;
+    while (abs(totalError - prevError) > 0.001 && jointError)
+    {
         prevError = totalError;
 
         // Copy from joint_state publisher to current joints
         for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
-        {   
+        {
           current_joint_pos[i] = jointStates.position[i];
-        } 
+        }
 
         // Compute total error of all joints away from last position
         totalError = 0;
@@ -276,6 +278,7 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
           currentPoint = simplify_angle(current_joint_pos[i]);
           error[i] = nearest_equivalent(simplify_angle(goal->trajectory.points[numPoints-1].positions[i]),currentPoint) - currentPoint;
           totalError += fabs(error[i]);
+          jointError = jointError || error[i] > ERROR_THRESHOLD;
         }
 
     // Rate to check if error has changed
@@ -340,17 +343,19 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
           current_joint_pos[i] = jointStates.position[i];
         }
 
-        totalError = 0;
+        bool jointError = false;
+        double maxError = 0;
         for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
         {
           currentPoint = simplify_angle(current_joint_pos[i]);
           error[i] = nearest_equivalent(simplify_angle((splines.at(i))(timePoints.at(timePoints.size() - 1))),
                                         currentPoint) - currentPoint;
-          totalError += fabs(error[i]);
+          jointError = jointError || fabs(error[i]) > ERROR_THRESHOLD;
         }
 
-        if (totalError < .035 || ros::Time::now() - finalPointTime >= ros::Duration(3.0))
+        if (!jointError || ros::Time::now() - finalPointTime >= ros::Duration(3.0))
         {
+          cout << "Errors: " << error[0] << ", " << error[1] << ", " << error[2] << ", " << error[3] << ", " << error[4] << ", " << error[5] << endl;
           //stop arm
           trajectoryPoint.joint1 = 0.0;
           trajectoryPoint.joint2 = 0.0;
