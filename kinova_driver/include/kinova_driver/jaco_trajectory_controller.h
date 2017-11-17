@@ -68,6 +68,7 @@ private:
   // Parameters
   double maxCurvature;
   bool   sim_flag_;
+  bool   cubic_flag_;
 
   sensor_msgs::JointState jointStates;
 
