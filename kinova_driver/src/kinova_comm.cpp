@@ -76,10 +76,13 @@ KinovaComm::KinovaComm(const ros::NodeHandle& node_handle,
     EthernetCommConfig ethernet_settings;
     std::string local_IP,subnet_mask;
     int local_cmd_port,local_bcast_port;
+    bool is_prentice;
     node_handle.getParam("ethernet/local_machine_IP", local_IP);
     node_handle.getParam("ethernet/subnet_mask", subnet_mask);
     node_handle.getParam("ethernet/local_cmd_port", local_cmd_port);
     node_handle.getParam("ethernet/local_broadcast_port", local_bcast_port);
+    node_handle.getParam("torque_parameters/is_prentice", is_prentice);
+
     ethernet_settings.localCmdport = local_cmd_port;
     ethernet_settings.localBcastPort = local_bcast_port;
     ethernet_settings.localIpAddress = inet_addr(local_IP.c_str());
@@ -197,7 +200,7 @@ KinovaComm::KinovaComm(const ros::NodeHandle& node_handle,
 
     //Set torque safety factor to 1
     kinova_api_.setTorqueSafetyFactor(1);
-    setGravCompParams();
+    setGravCompParams(is_prentice);
 
     // Set the angular velocity of each of the joints to zero
     TrajectoryPoint kinova_velocity;
@@ -1621,13 +1624,21 @@ int KinovaComm::SetRedundantJointNullSpaceMotion(int state)
     }
 }
 
-void KinovaComm::setGravCompParams()
+void KinovaComm::setGravCompParams(bool is_prentice)
 {
     ROS_INFO("Setting gravity vector");
     float GravityVector[3];
-    GravityVector[0] = 0;// -9.81; 
-    GravityVector[1] = -9.81;// 0;
-    GravityVector[2] = 0;// 0;
+
+    if (is_prentice) {
+        GravityVector[0] = 0;// -9.81; 
+        GravityVector[1] = -9.81;// 0;
+        GravityVector[2] = 0;// 0;
+    } else {
+        GravityVector[0] = -9.81;// -9.81; 
+        GravityVector[1] = 0;// 0;
+        GravityVector[2] = 0;// 0;
+    }
+
     setGravityVector(GravityVector);
 
     kinova_api_.setTorqueControlType(DIRECTTORQUE);
