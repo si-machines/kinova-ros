@@ -286,11 +286,7 @@ bool KinovaComm::isStopped()
 void KinovaComm::startForceControl()
 {
     boost::recursive_mutex::scoped_lock lock(api_mutex_);
-    float GravityVector[3];
-    GravityVector[0] = 0;// -9.81; 
-    GravityVector[1] = -9.81;// 0;
-    GravityVector[2] = 0;// 0;
-    setGravityVector(GravityVector);
+    // setGravCompParams(is_prentice);
     int result = kinova_api_.startForceControl();
     if (result != NO_ERROR_KINOVA)
     {
@@ -1634,9 +1630,9 @@ void KinovaComm::setGravCompParams(bool is_prentice)
         GravityVector[1] = -9.81;// 0;
         GravityVector[2] = 0;// 0;
     } else {
-        GravityVector[0] = -9.81;// -9.81; 
+        GravityVector[0] = 0;// -9.81; 
         GravityVector[1] = 0;// 0;
-        GravityVector[2] = 0;// 0;
+        GravityVector[2] = -9.81;// 0;
     }
 
     setGravityVector(GravityVector);
