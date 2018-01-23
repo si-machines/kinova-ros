@@ -1645,6 +1645,7 @@ void KinovaComm::enableGravComp()
 {
     ROS_INFO("Setting gc as feed forward gravity torques");
     kinova_api_.setTorqueSafetyFactor(1.0);
+    kinova_api_.setTorqueVibrationController(0.7);
     kinova_api_.setTorqueRobotProtection(1);
     kinova_api_.switchTrajectoryTorque(TORQUE);
     float jointCmd[7];
