@@ -17,8 +17,10 @@
     xmlns:xacro="http://ros.org/wiki/xacro">
 
     <xacro:include filename="$(find kinova_description)/urdf/kinova_common.xacro" />
-    <xacro:include filename="$(find vector_description)/urdf/manipulation/robotiq/robotiq_85_gripper.urdf.xacro" />
+    <xacro:include filename="$(find robotiq_85_description)/urdf/robotiq_85_gripper.urdf.xacro" />
 
+    <!-- Import all Gazebo-customization elements -->
+    <xacro:include filename="$(find kinova_description)/urdf/kinova.gazebo" />
     <property name="link_base_mesh" value="base" />
     <property name="link_1_mesh" value="shoulder" />
     <property name="link_2_mesh" value="arm_half_1" />
@@ -46,8 +48,6 @@
     <property name="joint_base" value="joint_base" />
     <property name="joint_base_type" value="fixed" />
     <property name="joint_base_axis_xyz" value="0 0 0" />
-    <property name="joint_base_origin_xyz" value="0.06079866 0 0" />
-    <property name="joint_base_origin_rpy" value="${J_PI/2} 0 ${J_PI/2}" />
 
     <property name="joint_1" value="joint_1" />
     <property name="joint_1_type" value="continuous" />
@@ -113,12 +113,14 @@
 
 
     <!--xacro:macro name="jaco_robot" params="parent prefix"-->
-    <xacro:macro name="j2s7s300" params="base_parent prefix:=j2s7s300 *origin">
+    <property name="default_base_trans" value="0 0 0" />
+    <property name="default_base_rot" value="0 0 0" />
+    <xacro:macro name="j2s7s300" params="base_parent prefix:=j2s7s300 trans:=${default_base_trans} rot:=${default_base_rot}">
 
         <xacro:gazebo_config robot_namespace="${prefix}"/>
     
         <xacro:kinova_armlink link_name="${prefix}_link_base" link_mesh="${link_base_mesh}" mesh_no="${link_base_mesh_no}"/>
-        <xacro:kinova_armjoint joint_name="${prefix}_joint_base" type="${joint_base_type}" parent="${base_parent}" child="${prefix}_link_base" joint_axis_xyz="${joint_base_axis_xyz}" joint_origin_xyz="${joint_base_origin_xyz}" joint_origin_rpy="${joint_base_origin_rpy}" joint_lower_limit="0" joint_upper_limit="0" fixed="true"/>
+        <xacro:kinova_armjoint joint_name="${prefix}_joint_base" type="${joint_base_type}" parent="${base_parent}" child="${prefix}_link_base" joint_axis_xyz="${joint_base_axis_xyz}" joint_origin_xyz="${trans}" joint_origin_rpy="${rot}" joint_lower_limit="0" joint_upper_limit="0" fixed="true"/>
 
         <xacro:kinova_armlink link_name="${prefix}_link_1" link_mesh="${link_1_mesh}" use_ring_mesh="true" mesh_no="${link_1_mesh_no}"/>
         <xacro:kinova_armjoint joint_name="${prefix}_joint_1" type="${joint_1_type}" parent="${prefix}_link_base" child="${prefix}_link_1" joint_axis_xyz="${joint_1_axis_xyz}" joint_origin_xyz="${joint_1_origin_xyz}" joint_origin_rpy="${joint_1_origin_rpy}" joint_lower_limit="${joint_1_lower_limit}" joint_upper_limit="${joint_1_upper_limit}"/>
@@ -199,7 +201,7 @@
           </actuator>
         </transmission>
 
-        <xacro:robotiq_85_gripper prefix="${prefix}_" parent="${prefix}_ee_base">
+        <xacro:robotiq_85_gripper prefix="" parent="${prefix}_ee_base">
           <origin xyz="0 0 0" rpy="0 0 0" />
         </xacro:robotiq_85_gripper>
 
@@ -209,3 +211,4 @@
 
 
 </root>
+
