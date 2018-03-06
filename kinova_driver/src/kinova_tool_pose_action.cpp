@@ -53,10 +53,11 @@
 namespace kinova
 {
 
-KinovaPoseActionServer::KinovaPoseActionServer(KinovaComm &arm_comm, const ros::NodeHandle &nh, const std::string &kinova_robotType)
+KinovaPoseActionServer::KinovaPoseActionServer(KinovaComm &arm_comm, const ros::NodeHandle &nh, const std::string &kinova_robotType, const std::string &kinova_robotName)
     : arm_comm_(arm_comm),
       node_handle_(nh, "pose_action"),
       kinova_robotType_(kinova_robotType),
+      kinova_robotName_(kinova_robotName),
       action_server_(node_handle_, "tool_pose",
                      boost::bind(&KinovaPoseActionServer::actionCallback, this, _1), false)
 {
@@ -69,7 +70,7 @@ KinovaPoseActionServer::KinovaPoseActionServer(KinovaComm &arm_comm, const ros::
     node_handle_.param<double>("EulerAngle_tolerance", EulerAngle_tolerance, 2.0*M_PI/180);
 
     //    tf_prefix_ = kinova_robotType_ + "_" + boost::lexical_cast<string>(same_type_index); // in case of multiple same_type robots
-    tf_prefix_ = kinova_robotType_ + "_";
+    tf_prefix_ = kinova_robotName_ + "_";
 
     position_tolerance_ = static_cast<float>(position_tolerance);
     EulerAngle_tolerance_ = static_cast<float>(EulerAngle_tolerance);
@@ -140,7 +141,15 @@ void KinovaPoseActionServer::actionCallback(const kinova_msgs::ArmPoseGoalConstP
             arm_comm_.setCartesianPosition(target);
             ros::spinOnce();
 
-            if (action_server_.isPreemptRequested() || !ros::ok())
+	    if (arm_comm_.isStopped())
+            {
+                ROS_DEBUG_STREAM("" << __PRETTY_FUNCTION__ << ": arm_comm_.isStopped()");
+                result.pose = feedback.pose;
+                action_server_.setAborted(result);
+                ROS_WARN_STREAM(__PRETTY_FUNCTION__ << ": LINE " << __LINE__ << ", setAborted ");
+                return;
+            }
+            else if (action_server_.isPreemptRequested() || !ros::ok())
             {
                 ROS_DEBUG_STREAM("" << __PRETTY_FUNCTION__ << ": action server isPreemptRequested");
                 result.pose = feedback.pose;
@@ -148,14 +157,6 @@ void KinovaPoseActionServer::actionCallback(const kinova_msgs::ArmPoseGoalConstP
                 arm_comm_.startAPI();
                 action_server_.setPreempted(result);
                 ROS_WARN_STREAM(__PRETTY_FUNCTION__ << ": LINE " << __LINE__ << ", setPreempted ");
-                return;
-            }
-            else if (arm_comm_.isStopped())
-            {
-                ROS_DEBUG_STREAM("" << __PRETTY_FUNCTION__ << ": arm_comm_.isStopped()");
-                result.pose = feedback.pose;
-                action_server_.setAborted(result);
-                ROS_WARN_STREAM(__PRETTY_FUNCTION__ << ": LINE " << __LINE__ << ", setAborted ");
                 return;
             }
 
@@ -186,8 +187,11 @@ void KinovaPoseActionServer::actionCallback(const kinova_msgs::ArmPoseGoalConstP
                 ROS_DEBUG_STREAM("" << __PRETTY_FUNCTION__ << ": stall_interval_seconds_");
                 // Check if the full stall condition has been meet
                 result.pose = feedback.pose;
-                arm_comm_.stopAPI();
-                arm_comm_.startAPI();
+                if (!arm_comm_.isStopped())
+                {
+                	arm_comm_.stopAPI();
+                	arm_comm_.startAPI();
+		}
                 //why preemted, if the robot is stalled, trajectory/action failed!
                 /*
                 action_server_.setPreempted(result);

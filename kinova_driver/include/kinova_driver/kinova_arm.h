@@ -62,7 +62,7 @@ struct robot_info
 class KinovaArm
 {
  public:
-    KinovaArm(KinovaComm& arm, const ros::NodeHandle &node_handle, const std::string &kinova_robotType);
+    KinovaArm(KinovaComm& arm, const ros::NodeHandle &node_handle, const std::string &kinova_robotType, const std::string &kinova_robotName);
     ~KinovaArm();
 
     //Subscriber callbacks --------------------------------------------------------
@@ -120,7 +120,7 @@ class KinovaArm
     void publishJointAngles(void);
     void publishGFTorques(void);
     void publishToolWrench(void);
-    void publishFingerPosition(void);   
+    void publishFingerPosition(void);
 
     tf::TransformListener tf_listener_;
     ros::NodeHandle node_handle_;
@@ -171,6 +171,7 @@ class KinovaArm
 
     // Parameters
     std::string kinova_robotType_;
+    std::string kinova_robotName_;
     std::string tf_prefix_;
 
     char robot_category_;
