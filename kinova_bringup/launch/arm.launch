@@ -8,14 +8,22 @@
     <arg name="comport" default="/dev/ttyUSB0"/>
     <arg name="baud" default="115200"/>
 
+    <!-- Set this arg to false to enable the original Jaco driver -->
+    <arg name="use_hlpr_trajectory_controller" default="true"/>
+
     <!-- Start the arm driver if we are not in simulation-->
     <include file="$(find kinova_bringup)/launch/kinova_robot.launch" unless="$(arg sim)">
         <arg name="kinova_robotType" value="j2s7s300" />
         <arg name="use_urdf" value="false" />
     </include>
-
+<!-- launch-prefix="xterm -e gdb -ex run -args" -->
     <!-- Start the trajectory server driver -->
-    <node pkg="kinova_driver" type="hlpr_trajectory_controller" name="jaco_trajectory_controller" output="screen">
+    <node pkg="kinova_driver" type="hlpr_trajectory_controller" name="jaco_trajectory_controller" output="screen" if="$(arg use_hlpr_trajectory_controller)"  respawn="true">
+        <param name="sim" value="$(arg sim)"/>
+    </node>
+
+    <!-- Custom HLPR trajectory server -->
+    <node pkg="kinova_driver" type="jaco_trajectory_controller" name="jaco_trajectory_controller" output="screen" unless="$(arg use_hlpr_trajectory_controller)">
         <param name="sim" value="$(arg sim)"/>
     </node>
 

@@ -66,7 +66,7 @@ add_library(kinova_driver
   src/kinova_joint_trajectory_controller.cpp
   src/hlpr_trajectory_controller.cpp
   include/kinova_driver/kinova_joint_trajectory_controller.h
-  include/kinova_driver/jaco_trajectory_controller.h
+  include/kinova_driver/hlpr_trajectory_controller.h
   include/kinova_driver/kinova_joint_angles_action.h
   include/kinova_driver/kinova_api.h
   include/kinova_driver/kinova_arm.h
@@ -93,13 +93,20 @@ install(TARGETS joint_trajectory_action_server
 add_dependencies(joint_trajectory_action_server ${catkin_EXPORTED_TARGETS})
 
 add_executable(hlpr_trajectory_controller 
-  src/hlpr_trajectory_controller.cpp
-  include/kinova_driver/jaco_trajectory_controller.h)
+  src/hlpr_trajectory_controller.cpp)
 target_link_libraries(hlpr_trajectory_controller 
   ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES} ${Eigen_LIBRARIES})
 install(TARGETS hlpr_trajectory_controller 
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 add_dependencies(hlpr_trajectory_controller ${catkin_EXPORTED_TARGETS})
+
+add_executable(jaco_trajectory_controller 
+  src/kinova_joint_trajectory_controller.cpp)
+target_link_libraries(jaco_trajectory_controller 
+  ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES} ${Eigen_LIBRARIES} kinova_driver)
+install(TARGETS jaco_trajectory_controller 
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+add_dependencies(jaco_trajectory_controller ${catkin_EXPORTED_TARGETS})
 
 add_executable(gripper_command_action_server 
   src/joint_trajectory_action/gripper_command_action_server.cpp 

@@ -114,6 +114,9 @@
     <xacro:property name="joint_end_effector_origin_xyz" value="0 0 -0.1600" />
     <xacro:property name="joint_end_effector_origin_rpy" value="${J_PI} 0 0" />
 
+    <xacro:property name="default_base_trans" value="0 0 0"/>
+    <xacro:property name="default_base_rot" value="0 0 0"/>
+
     <!--xacro:macro name="jaco_robot" params="parent prefix"-->
     <xacro:macro name="j2s7s300" params="base_parent prefix:=j2s7s300 trans:=${default_base_trans} rot:=${default_base_rot}">
 

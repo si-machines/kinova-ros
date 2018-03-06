@@ -599,6 +599,9 @@ void KinovaArm::publishJointAngles(void)
 
     if (kinova_gripper_)
     {
+        FingerAngles fingers;
+        kinova_comm_.getFingerPositions(fingers);
+
         if(finger_number_==2)
         {
             joint_state.position[joint_total_number_-2] = fingers.Finger1/6800*80*M_PI/180;
@@ -777,27 +780,21 @@ void KinovaArm::publishFingerPosition(void)
 void KinovaArm::statusTimerJointStates(const ros::TimerEvent&)
 {
     publishJointAngles();
-<<<<<<< HEAD
 }
 
 void KinovaArm::statusTimerGFTorques(const ros::TimerEvent&)
 {
-  publishGFTorques();
+    publishGFTorques();
 }
 
 void KinovaArm::statusTimerToolWrench(const ros::TimerEvent&)
 {
-  publishToolWrench();
+    publishToolWrench();
 }
 
 void KinovaArm::statusTimerFingerStates(const ros::TimerEvent&)
 {
-  publishFingerPosition();
-=======
-    publishToolPosition();
-    publishToolWrench();
     publishFingerPosition();
->>>>>>> kinova/kinova-ros-beta
 }
 
 }  // namespace kinova
