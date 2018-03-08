@@ -8,6 +8,7 @@ JointTrajectoryController::JointTrajectoryController(kinova::KinovaComm &kinova_
     kinova_comm_(kinova_comm),
     nh_(n)
 {
+    ROS_WARN_STREAM("Using kinova version. This is a test.");
     //ROS_DEBUG_STREAM_ONCE("Get in: " << __PRETTY_FUNCTION__);
     ros::NodeHandle pn("~");
     std::string robot_type;

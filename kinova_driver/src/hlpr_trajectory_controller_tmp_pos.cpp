@@ -200,7 +200,7 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
       int jointIndex = std::distance(jointNames.begin(), std::find(jointNames.begin(), jointNames.end(), jointName));
       if (jointIndex >= 0 && jointIndex < NUM_JACO_JOINTS)
       {
-        trajectoryPoints[jointIndex][i] = goal->trajectory.points.at(i).velocities.at(unsortedJointIndex);
+        trajectoryPoints[jointIndex][i] = goal->trajectory.points.at(i).positions.at(unsortedJointIndex);
       }
     }
   }
@@ -443,23 +443,21 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
             last_t_point = timePoints[t_idx-1];
             if (t > last_t_point && t < t_point)  // found our interp values
             {
-              interpVal = jointPoints[i][t_idx-1] + (t-last_t_point)/(t_point-last_t_point) * ((jointPoints[i][t_idx] - jointPoints[i][t_idx-1]));
-              break;
+              interpVal = last_t_point + (t-last_t_point)/(t_point-last_t_point) * ((jointPoints[i][t_idx] - jointPoints[i][t_idx-1]));
             }
           }
           if(t > t_point) 
           {
-            interpVal = 0.0;
-            jointError = false;
+            interpVal = jointPoints[i][timePoints.size() - 1];
           }
           else if(interpVal == -1)
           {
             ROS_INFO_STREAM("Attempting to lookup interp value for t=" << t << ", in range " << timePoints[0] << " to " << timePoints[timePoints.size() - 1]);
           }
           assert(interpVal != -1);
-          error[i] = interpVal;
+          error[i] = nearest_equivalent(simplify_angle(interpVal), currentPoint) - currentPoint;
           
-          // jointError = jointError || fabs(error[i]) > ERROR_THRESHOLD;
+          jointError = jointError || fabs(error[i]) > ERROR_THRESHOLD;
         }
 
         // if (!jointError || ros::Time::now() - finalPointTime >= ros::Duration(3.0))
@@ -509,43 +507,20 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
           // }
           // error[i] = nearest_equivalent(simplify_angle(splineValue), currentPoint) - currentPoint;
 
-          double t_point = -1;
-          double last_t_point = -1;
-          double interpVal = -1;
-          for (size_t t_idx = 1; t_idx < timePoints.size(); ++t_idx)
-          {
-            t_point = timePoints[t_idx];
-            last_t_point = timePoints[t_idx-1];
-            if (t > last_t_point && t < t_point)  // found our interp values
-            {
-              interpVal = jointPoints[i][t_idx-1] + (t-last_t_point)/(t_point-last_t_point) * ((jointPoints[i][t_idx] - jointPoints[i][t_idx-1]));
-              break;
-            }
-          }
-          if(t > t_point) 
-          {
-            interpVal = jointPoints[i][timePoints.size() - 1];
-          }
-          else if(interpVal == -1)
-          {
-            ROS_INFO_STREAM("Attempting to lookup interp value for t=" << t << ", in range " << timePoints[0] << " to " << timePoints[timePoints.size() - 1]);
-          }
-
-          // double interpVal = jointPoints[i][timePoints.size() - 1];
-          error[i] = interpVal;
+          double interpVal = jointPoints[i][timePoints.size() - 1];
+          error[i] = nearest_equivalent(simplify_angle(interpVal), currentPoint) - currentPoint;
         }
       }
-      ROS_INFO_STREAM("current velocity: " << error);
 
       //calculate control input
       //populate the velocity command
-      trajectoryPoint.joint1 = error[0] * RAD_TO_DEG;
-      trajectoryPoint.joint2 = error[1] * RAD_TO_DEG;
-      trajectoryPoint.joint3 = error[2] * RAD_TO_DEG;
-      trajectoryPoint.joint4 = error[3] * RAD_TO_DEG;
-      trajectoryPoint.joint5 = error[4] * RAD_TO_DEG;
-      trajectoryPoint.joint6 = error[5] * RAD_TO_DEG;
-      trajectoryPoint.joint7 = error[6] * RAD_TO_DEG;
+      trajectoryPoint.joint1 = (KP * error[0] + KV * (error[0] - prevError[0]) * RAD_TO_DEG);
+      trajectoryPoint.joint2 = (KP * error[1] + KV * (error[1] - prevError[1]) * RAD_TO_DEG);
+      trajectoryPoint.joint3 = (KP * error[2] + KV * (error[2] - prevError[2]) * RAD_TO_DEG);
+      trajectoryPoint.joint4 = (KP * error[3] + KV * (error[3] - prevError[3]) * RAD_TO_DEG);
+      trajectoryPoint.joint5 = (KP * error[4] + KV * (error[4] - prevError[4]) * RAD_TO_DEG);
+      trajectoryPoint.joint6 = (KP * error[5] + KV * (error[5] - prevError[5]) * RAD_TO_DEG);
+      trajectoryPoint.joint7 = (KP * error[6] + KV * (error[6] - prevError[6]) * RAD_TO_DEG);
 
       //for debugging:
       // ROS_INFO_STREAM("Final joint position errors: " << error[0] << ", " << error[1] << ", " << error[2] << ", " << error[3] << ", " << error[4] << ", " << error[5]);
