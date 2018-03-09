@@ -30,6 +30,8 @@
     <param name="gf_effort" value="$(arg gf_effort)" />
   </node>
 
+  <!-- this basically looks like a worse version of robot_state_publisher, which already
+       gets run elsewhere. -->
   <!--
   <group unless="$(arg use_urdf)">
     <node name="$(arg kinova_robotName)_tf_updater" pkg="kinova_driver" type="kinova_tf_updater" output="screen" cwd="node" args="$(arg kinova_robotType)">

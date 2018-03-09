@@ -45,6 +45,7 @@ public:
 
   void executeSmoothTrajectory(const control_msgs::FollowJointTrajectoryGoalConstPtr &goal);
 
+
 private:
   ros::NodeHandle n;
   ros::NodeHandle pnh;
@@ -73,6 +74,8 @@ private:
   sensor_msgs::JointState jointStates;
 
   std::vector<std::string> jointNames;
+  
+  void stopMotion();
 };
 
 #endif
