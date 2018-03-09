@@ -448,4 +448,3 @@ int main(int argc, char** argv)
   JacoTrajectoryController jtc;
   ros::waitForShutdown();
 }
-

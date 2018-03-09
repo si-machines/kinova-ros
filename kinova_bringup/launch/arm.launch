@@ -8,9 +8,9 @@ Bring up the Kinova Jaco 7DOF arm.
     <arg name="sim" default="false" />
     <!-- If true, the launch file will start the robot and joint state
          publishers needed for moveit to execute trajectories correctly.
-         Set this to false if you're including this launch file from a 
+         Keep this as false if you're including this launch file from a 
          different launch file. -->
-    <arg name="standalone" default="true" />
+    <arg name="standalone" default="false" />
 
     <!-- Start the low-level drvier-->
     <include file="$(find kinova_bringup)/launch/kinova_robot.launch" unless="$(arg sim)">
