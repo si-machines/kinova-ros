@@ -1,14 +1,15 @@
-#include <kinova_driver/jaco_trajectory_controller.h>
+#include <kinova_driver/new_trajectory_controller.h>
 
-using namespace std;
+// using namespace std;
 
 JacoTrajectoryController::JacoTrajectoryController() : pnh("~"),
-  smoothTrajectoryServer(pnh, "trajectory", boost::bind(&JacoTrajectoryController::executeSmoothTrajectory, this, _1), false)
+  smoothTrajectoryServer(pnh, "trajectory", boost::bind(&JacoTrajectoryController::executeSmoothTrajectory, this, _1), false),
+  jointNames()
 {
   pnh.param("max_curvature", maxCurvature, 100.0);
   pnh.param("sim", sim_flag_, false);
 
-  jointNames.clear();
+  // jointNames.clear();
   jointNames.push_back("j2s7s300_joint_1");
   jointNames.push_back("j2s7s300_joint_2");
   jointNames.push_back("j2s7s300_joint_3");
@@ -20,14 +21,14 @@ JacoTrajectoryController::JacoTrajectoryController() : pnh("~"),
   // Setting up simulation vs. real robot
   if(!sim_flag_)
   {
-    ROS_INFO("Using real robot arm.");
-
+    ROS_INFO("Using real Kinova arm.");
+    ROS_WARN("This is Adam's version. This is a test.");
     // Connect to the low-level angular driver from kinova-ros
     angularCmdPublisher = n.advertise<kinova_msgs::JointVelocity>("j2s7s300_driver/in/joint_velocity", 1);
   }
   else
   {
-    ROS_INFO("Using simulation robot arm.");
+    ROS_INFO("Using simulated Kinova arm.");
 
     // Setup a fake gravity comp service (torque control)
     start_gravity_comp_ = n.advertiseService(
@@ -45,7 +46,6 @@ JacoTrajectoryController::JacoTrajectoryController() : pnh("~"),
 
   // Subscribes to the joint states of the robot
   jointStatesSubscriber = n.subscribe("joint_states", 1, &JacoTrajectoryController::jointStateCallback, this);
-
 
   // Start the trajectory server
   smoothTrajectoryServer.start();
@@ -85,39 +85,59 @@ bool JacoTrajectoryController::stopForceControlCallback(kinova_msgs::Stop::Reque
 
 void JacoTrajectoryController::jointStateCallback(const sensor_msgs::JointState &msg)
 {
+  // if(msg.name.size() != NUM_JACO_JOINTS) {
+  //   ROS_WARN_STREAM("Joint state had " << msg.name.size() << " joints, but the arm has " << NUM_JACO_JOINTS << " joints.");
+  // }
+
   // Get the names of all the joints
-  std::vector<std::string> pub_joint_names = msg.name;
+  // std::vector<std::string> pub_joint_names = msg.name;
 
   // Create a new message
   sensor_msgs::JointState arm_msg;
-  std::vector<double> position, velocity, effort;
-  std::vector<std::string> names;
-  position.resize(NUM_JACO_JOINTS);
-  velocity.resize(NUM_JACO_JOINTS);
-  effort.resize(NUM_JACO_JOINTS);
-  names.resize(NUM_JACO_JOINTS);
-  arm_msg.position = position;
-  arm_msg.velocity = velocity;
-  arm_msg.effort = effort;
-  arm_msg.name = names;
+  // std::vector<double> position, velocity, effort;
+  // std::vector<std::string> names;
+  arm_msg.position.resize(NUM_JACO_JOINTS);
+  arm_msg.velocity.resize(NUM_JACO_JOINTS);
+  arm_msg.effort.resize(NUM_JACO_JOINTS);
+  arm_msg.name.resize(NUM_JACO_JOINTS);
 
   // Cycle through the number of JACO joints
-  for (int joint_id = 0; joint_id < NUM_JACO_JOINTS; joint_id++){
-
+  for (int joint_id = 0; joint_id < NUM_JACO_JOINTS; ++joint_id){
     // Find the location of the joint
-    string joint_name = jointNames[joint_id];
-    int msg_loc = distance(pub_joint_names.begin(), find(pub_joint_names.begin(), pub_joint_names.end(), joint_name));
+    std::string joint_name = jointNames[joint_id];
+    int msg_loc = std::distance(msg.name.begin(), std::find(msg.name.begin(), msg.name.end(), joint_name));
 
-    // Pull out joint loc and store
-    arm_msg.position[joint_id] = msg.position[msg_loc];
-    arm_msg.name[joint_id] = msg.name[msg_loc];
-    arm_msg.velocity[joint_id] = msg.velocity[msg_loc];
-    arm_msg.effort[joint_id] = msg.effort[msg_loc];
+    // The warning printed if the following check fails is quite verbose.
+    // Effort information takes a while to get assigned to the messages (maybe a calibration
+    // or filtering waiting period?, so we use _DELAYED, but only for the error related to effort,
+    // to avoid a huge number of printouts as the program starts.
+    // 
+    // First check name, position, and velocity, which always seem to work ("shouldn't" fail)
+    if(msg_loc >= msg.name.size() || joint_id >= arm_msg.name.size() ||
+       msg_loc >= msg.position.size() || joint_id >= arm_msg.position.size() ||
+       msg_loc >= msg.velocity.size() || joint_id >= arm_msg.velocity.size()) {
+      ROS_WARN_STREAM("At least one of the Kinova joint indices was out of bounds when attempting " <<
+                      "to assign joint states. Error encountered at joint " << joint_name << "(#" <<
+                      joint_id << "), but there may be additional errors. For now, aborting the " <<
+                      "jointStateCallback.");
+      break;
+    }
+    else {
+      arm_msg.name[joint_id] = msg.name[msg_loc];
+      arm_msg.position[joint_id] = msg.position[msg_loc];
+      arm_msg.velocity[joint_id] = msg.velocity[msg_loc];
+    }
+    // Now check the efforts separately
+    if(msg_loc >= msg.effort.size() || joint_id >= arm_msg.effort.size()) {
+      // Do a delayed printout, so we only show this if the error is persistent
+      ROS_WARN_STREAM_DELAYED_THROTTLE(5, "Effort information is missing for at least one Kinova joint.");
+    }
+    else {
+      arm_msg.effort[joint_id] = msg.effort[msg_loc];
+    }
   }
 
   jointStates = arm_msg;
-  //cout << "Current names: " << jointStates.name[0] << ", " << jointStates.name[1] << ", " << jointStates.name[2] << ", " << jointStates.name[3] << ", " << jointStates.name[4] << ", " << jointStates.name[5] << jointStates.name[6] << endl;
-  //cout << "Current values: " << jointStates.position[0] << ", " << jointStates.position[1] << ", " << jointStates.position[2] << ", " << jointStates.position[3] << ", " << jointStates.position[4] << ", " << jointStates.position[5] << jointStates.position[6] << endl;
 }
 
 /** Adjust angle to equivalent angle on [-pi, pi]
@@ -161,86 +181,45 @@ static inline double nearest_equivalent(double desired, double current)
   return highVal;
 }
 
+void JacoTrajectoryController::stopMotion() {
+  kinova_msgs::JointVelocity cmdVel;
+  cmdVel.joint1 = 0.0;
+  cmdVel.joint2 = 0.0;
+  cmdVel.joint3 = 0.0;
+  cmdVel.joint4 = 0.0;
+  cmdVel.joint5 = 0.0;
+  cmdVel.joint6 = 0.0;
+  cmdVel.joint7 = 0.0;
+
+  angularCmdPublisher.publish(cmdVel);
+}
+
 void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::FollowJointTrajectoryGoalConstPtr &goal)
 {
-  float trajectoryPoints[NUM_JACO_JOINTS][goal->trajectory.points.size()];
   int numPoints = goal->trajectory.points.size();
+  int numJoints = goal->trajectory.joint_names.size();
+
+  assert(numPoints > 0);
+  assert(numJoints == NUM_JACO_JOINTS);
+
+  //initialize arrays needed to fit a smooth trajectory to the given points
+  std::vector<double> timePoints(numPoints);
+  float velocityPoints[NUM_JACO_JOINTS][numPoints];
+  float positionPoints[NUM_JACO_JOINTS][numPoints];
 
   //get trajectory data
   for (unsigned int i = 0; i < numPoints; i++)
   {
-    for (int trajectoryIndex = 0; trajectoryIndex < goal->trajectory.joint_names.size(); trajectoryIndex ++)
+    timePoints[i] = goal->trajectory.points[i].time_from_start.toSec();
+    for (int unsortedJointIndex = 0; unsortedJointIndex < numJoints; ++unsortedJointIndex)
     {
-      string jointName = goal->trajectory.joint_names[trajectoryIndex];
-      int jointIndex = distance(jointNames.begin(), find(jointNames.begin(), jointNames.end(), jointName));
+      std::string jointName = goal->trajectory.joint_names[unsortedJointIndex];
+      int jointIndex = std::distance(jointNames.begin(), std::find(jointNames.begin(), jointNames.end(), jointName));
       if (jointIndex >= 0 && jointIndex < NUM_JACO_JOINTS)
       {
-        trajectoryPoints[jointIndex][i] = goal->trajectory.points.at(i).positions.at(trajectoryIndex);
+        velocityPoints[jointIndex][i] = goal->trajectory.points.at(i).velocities.at(unsortedJointIndex);
+        positionPoints[jointIndex][i] = goal->trajectory.points.at(i).positions.at(unsortedJointIndex);
       }
-    }
-  }
-
-  //initialize arrays needed to fit a smooth trajectory to the given points
-  ecl::Array<double> timePoints(numPoints);
-  timePoints[0] = 0.0;
-  vector<ecl::Array<double> > jointPoints;
-  jointPoints.resize(NUM_JACO_JOINTS);
-  float prevPoint[NUM_JACO_JOINTS];
-  for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
-  {
-    jointPoints[i].resize(numPoints);
-    jointPoints[i][0] = trajectoryPoints[i][0];
-    prevPoint[i] = trajectoryPoints[i][0];
-  }
-
-  //determine time component of trajectories for each joint
-  for (unsigned int i = 1; i < numPoints; i++)
-  {
-    float maxTime = 0.0;
-    for (unsigned int j = 0; j < NUM_JACO_JOINTS; j++)
-    {
-      //calculate approximate time required to move to the next position
-      float time = fabs(trajectoryPoints[j][i] - prevPoint[j]);
-      if (j <= 3)
-        time /= (LARGE_ACTUATOR_VELOCITY*0.9);  // run slightly below max speed
-      else
-        time /= (SMALL_ACTUATOR_VELOCITY*0.9);  // run slightly below max speed
-
-      if (time > maxTime)
-        maxTime = time;
-
-      jointPoints[j][i] = trajectoryPoints[j][i];
-      prevPoint[j] = trajectoryPoints[j][i];
-    }
-
-    timePoints[i] = timePoints[i - 1] + maxTime;
-  }
-
-  // Spline the given points to smooth the trajectory
-  vector<ecl::SmoothLinearSpline> splines;
-  splines.resize(NUM_JACO_JOINTS);
-
-  // Setup cubic storage in case
-  vector<ecl::CubicSpline> cubic_splines;
-  cubic_splines.resize(NUM_JACO_JOINTS);
-  cubic_flag_=false;
-  try
-  {
-    for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
-    {
-      ecl::SmoothLinearSpline tempSpline(timePoints, jointPoints[i], maxCurvature);
-      splines.at(i) = tempSpline;
-    }
-  }
-  catch (...) // This catches ALL exceptions
-  {
-    
-    cubic_flag_= true;
-    ROS_WARN("WARNING: Performing cubic spline rather than smooth linear because of crash");
-    for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
-    {
-      ecl::CubicSpline tempSpline = ecl::CubicSpline::Natural(timePoints, jointPoints[i]);
-      cubic_splines.at(i) = tempSpline;
     }
   }
 
@@ -249,11 +228,11 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
   double startTime = ros::Time::now().toSec();
   double t = 0;
   float error[NUM_JACO_JOINTS];
+  float desired_velocity[NUM_JACO_JOINTS];
   float totalError;
   float prevError[NUM_JACO_JOINTS] = {0};
   float currentPoint;
   double current_joint_pos[NUM_JACO_JOINTS];
-  kinova_msgs::JointVelocity trajectoryPoint;
   ros::Rate rate(100);
   bool reachedFinalPoint;
   ros::Time finalPointTime;
@@ -314,25 +293,16 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
   }
   else
   {
+    ROS_INFO_STREAM("there are " << timePoints.size() << " points in the trajectory.");
 
+    kinova_msgs::JointVelocity cmdVel;
     // Sending to the real robot
     while (!trajectoryComplete)
     {
       //check for preempt requests from clients
       if (smoothTrajectoryServer.isPreemptRequested())
       {
-        //stop gripper control
-        trajectoryPoint.joint1 = 0.0;
-        trajectoryPoint.joint2 = 0.0;
-        trajectoryPoint.joint3 = 0.0;
-        trajectoryPoint.joint4 = 0.0;
-        trajectoryPoint.joint5 = 0.0;
-        trajectoryPoint.joint6 = 0.0;
-        trajectoryPoint.joint7 = 0.0;
-
-        angularCmdPublisher.publish(trajectoryPoint);
-
-        //preempt action server
+        stopMotion();
         smoothTrajectoryServer.setPreempted();
         ROS_INFO("Smooth trajectory server preempted by client");
 
@@ -343,6 +313,12 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
       t = ros::Time::now().toSec() - startTime;
       if (t > timePoints.at(timePoints.size() - 1))
       {
+        if (!reachedFinalPoint)
+        {
+          reachedFinalPoint = true;
+          finalPointTime = ros::Time::now();
+        }
+        ROS_INFO_STREAM("Past the end: " << t << " vs. " << timePoints.at(timePoints.size() - 1));
         //use final trajectory point as the goal to calculate error until the error
         //is small enough to be considered successful
         /*
@@ -352,51 +328,37 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
         }
         */
 
-        if (!reachedFinalPoint)
-        {
-          reachedFinalPoint = true;
-          finalPointTime = ros::Time::now();
-        }
-
+        bool jointError = false;
         for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
         {
           current_joint_pos[i] = jointStates.position[i];
-        }
-
-        bool jointError = false;
-        double maxError = 0;
-        for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
-        {
           currentPoint = simplify_angle(current_joint_pos[i]);
 
-          // Check if we're using a cubic or a linear spline
-          double splineValue;
-          if (cubic_flag_)
-          {
-            splineValue = (cubic_splines.at(i))(timePoints.at(timePoints.size() - 1));
-          }
-          else
-          {
-            splineValue = (splines.at(i))(timePoints.at(timePoints.size() - 1));
-          }
-          // Now generate the value
-          error[i] = nearest_equivalent(simplify_angle(splineValue),
-                                        currentPoint) - currentPoint;
+          size_t last_idx = timePoints.size() - 1;
+          double setpoint = 0;
+
+          kinova_msgs::JointVelocity cmdVel;
+          setpoint = simplify_angle(positionPoints[i][last_idx]);
+          setpoint = nearest_equivalent(setpoint, currentPoint);
+          error[i] = setpoint - currentPoint;
+          ROS_INFO_STREAM("setpoint: " << setpoint << ", current point: " << currentPoint << ", error: " << error[i]);
+
           jointError = jointError || fabs(error[i]) > ERROR_THRESHOLD;
         }
+        cmdVel.joint1 = error[0] * RAD_TO_DEG;
+        cmdVel.joint2 = error[1] * RAD_TO_DEG;
+        cmdVel.joint3 = error[2] * RAD_TO_DEG;
+        cmdVel.joint4 = error[3] * RAD_TO_DEG;
+        cmdVel.joint5 = error[4] * RAD_TO_DEG;
+        cmdVel.joint6 = error[5] * RAD_TO_DEG;
+        cmdVel.joint7 = error[6] * RAD_TO_DEG;
+        ROS_INFO_STREAM("joint position errors: " << error[0] << ", " << error[1] << ", " << error[2] << ", " << error[3] << ", " << error[4] << ", " << error[5]);
 
-        if (!jointError || ros::Time::now() - finalPointTime >= ros::Duration(3.0))
+        if (!jointError || ros::Time::now() - finalPointTime >= ros::Duration(5.0))
+        // if (!jointError)
         {
-          cout << "Errors: " << error[0] << ", " << error[1] << ", " << error[2] << ", " << error[3] << ", " << error[4] << ", " << error[5] << endl;
-          //stop arm
-          trajectoryPoint.joint1 = 0.0;
-          trajectoryPoint.joint2 = 0.0;
-          trajectoryPoint.joint3 = 0.0;
-          trajectoryPoint.joint4 = 0.0;
-          trajectoryPoint.joint5 = 0.0;
-          trajectoryPoint.joint6 = 0.0;
-          trajectoryPoint.joint7 = 0.0;
-          angularCmdPublisher.publish(trajectoryPoint);
+          // ROS_INFO_STREAM("Final joint position errors: " << error[0] << ", " << error[1] << ", " << error[2] << ", " << error[3] << ", " << error[4] << ", " << error[5]);
+          stopMotion();
           trajectoryComplete = true;
           ROS_INFO("Trajectory complete!");
           break;
@@ -419,35 +381,56 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
         for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
         {
           currentPoint = simplify_angle(current_joint_pos[i]);
-          // Check if we're using a cubic or a linear spline
-          double splineValue;
-          if (cubic_flag_)
+
+          double t_point = -1;
+          double last_t_point = -1;
+          double interpVel = -1;
+          double interpPos = -1;
+          for (size_t t_idx = 1; t_idx < timePoints.size(); ++t_idx)
           {
-            splineValue = (cubic_splines.at(i))(t);
+            t_point = timePoints[t_idx];
+            last_t_point = timePoints[t_idx-1];
+            if (t > last_t_point && t < t_point)  // found our interp values
+            {
+              interpVel = velocityPoints[i][t_idx-1] + (t-last_t_point)/(t_point-last_t_point) * ((velocityPoints[i][t_idx] - velocityPoints[i][t_idx-1]));
+              interpPos = velocityPoints[i][t_idx-1] + (t-last_t_point)/(t_point-last_t_point) * ((positionPoints[i][t_idx] - positionPoints[i][t_idx-1]));
+              break;
+            }
           }
-          else
+          if(t > t_point) 
           {
-            splineValue = (splines.at(i))(t);
+            interpVel = velocityPoints[i][timePoints.size() - 1];
           }
-          error[i] = nearest_equivalent(simplify_angle(splineValue), currentPoint) - currentPoint;
+          else if(interpVel == -1 || interpPos == -1)
+          {
+            ROS_INFO_STREAM("Attempting to lookup interp value for t=" << t << ", in range " << timePoints[0] << " to " << timePoints[timePoints.size() - 1]);
+          }
+
+          // double interpVel = velocityPoints[i][timePoints.size() - 1];
+          desired_velocity[i] = interpVel;
+
+          double currentPos = simplify_angle(current_joint_pos[i]);
+          error[i] = nearest_equivalent(simplify_angle(interpPos), currentPos) - currentPos;
         }
+        double gain = 0.1;
+        cmdVel.joint1 = (desired_velocity[0] + error[0] * gain) * RAD_TO_DEG;
+        cmdVel.joint2 = (desired_velocity[1] + error[1] * gain) * RAD_TO_DEG;
+        cmdVel.joint3 = (desired_velocity[2] + error[2] * gain) * RAD_TO_DEG;
+        cmdVel.joint4 = (desired_velocity[3] + error[3] * gain) * RAD_TO_DEG;
+        cmdVel.joint5 = (desired_velocity[4] + error[4] * gain) * RAD_TO_DEG;
+        cmdVel.joint6 = (desired_velocity[5] + error[5] * gain) * RAD_TO_DEG;
+        cmdVel.joint7 = (desired_velocity[6] + error[6] * gain) * RAD_TO_DEG;
       }
+      ROS_INFO_STREAM("current velocity: " << error);
 
       //calculate control input
       //populate the velocity command
-      trajectoryPoint.joint1 = (KP * error[0] + KV * (error[0] - prevError[0]) * RAD_TO_DEG);
-      trajectoryPoint.joint2 = (KP * error[1] + KV * (error[1] - prevError[1]) * RAD_TO_DEG);
-      trajectoryPoint.joint3 = (KP * error[2] + KV * (error[2] - prevError[2]) * RAD_TO_DEG);
-      trajectoryPoint.joint4 = (KP * error[3] + KV * (error[3] - prevError[3]) * RAD_TO_DEG);
-      trajectoryPoint.joint5 = (KP * error[4] + KV * (error[4] - prevError[4]) * RAD_TO_DEG);
-      trajectoryPoint.joint6 = (KP * error[5] + KV * (error[5] - prevError[5]) * RAD_TO_DEG);
-      trajectoryPoint.joint7 = (KP * error[6] + KV * (error[6] - prevError[6]) * RAD_TO_DEG);
-
-      //for debugging:
-      // cout << "Errors: " << error[0] << ", " << error[1] << ", " << error[2] << ", " << error[3] << ", " << error[4] << ", " << error[5] << endl;
 
       //send the velocity command
-      angularCmdPublisher.publish(trajectoryPoint);
+      angularCmdPublisher.publish(cmdVel);
+
+      //for debugging:
+      // ROS_INFO_STREAM("Final joint position errors: " << error[0] << ", " << error[1] << ", " << error[2] << ", " << error[3] << ", " << error[4] << ", " << error[5]);
 
       for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
       {
@@ -455,7 +438,6 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
       }
 
       rate.sleep();
-      ros::spinOnce();
     }
 
     control_msgs::FollowJointTrajectoryResult result;
@@ -468,7 +450,8 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "jaco_trajectory_controller");
 
+  ros::AsyncSpinner spinner(3);
+  spinner.start();
   JacoTrajectoryController jtc;
-  ros::spin();
+  ros::waitForShutdown();
 }
-
