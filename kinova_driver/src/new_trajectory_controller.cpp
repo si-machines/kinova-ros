@@ -228,11 +228,13 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
   double startTime = ros::Time::now().toSec();
   double t = 0;
   float error[NUM_JACO_JOINTS];
+	float vel_error[NUM_JACO_JOINTS];
   float desired_velocity[NUM_JACO_JOINTS];
   float totalError;
   float prevError[NUM_JACO_JOINTS] = {0};
   float currentPoint;
   double current_joint_pos[NUM_JACO_JOINTS];
+	double current_joint_vel[NUM_JACO_JOINTS];
   ros::Rate rate(100);
   bool reachedFinalPoint;
   ros::Time finalPointTime;
@@ -345,13 +347,13 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
 
           jointError = jointError || fabs(error[i]) > ERROR_THRESHOLD;
         }
-        cmdVel.joint1 = error[0] * RAD_TO_DEG;
-        cmdVel.joint2 = error[1] * RAD_TO_DEG;
-        cmdVel.joint3 = error[2] * RAD_TO_DEG;
-        cmdVel.joint4 = error[3] * RAD_TO_DEG;
-        cmdVel.joint5 = error[4] * RAD_TO_DEG;
-        cmdVel.joint6 = error[5] * RAD_TO_DEG;
-        cmdVel.joint7 = error[6] * RAD_TO_DEG;
+        cmdVel.joint1 = 0 * error[0] * RAD_TO_DEG;
+        cmdVel.joint2 = 0 * error[1] * RAD_TO_DEG;
+        cmdVel.joint3 = 0 * error[2] * RAD_TO_DEG;
+        cmdVel.joint4 = 0 * error[3] * RAD_TO_DEG;
+        cmdVel.joint5 = 0 * error[4] * RAD_TO_DEG;
+        cmdVel.joint6 = 0 * error[5] * RAD_TO_DEG;
+        cmdVel.joint7 = 0 * error[6] * RAD_TO_DEG;
         ROS_INFO_STREAM("joint position errors: " << error[0] << ", " << error[1] << ", " << error[2] << ", " << error[3] << ", " << error[4] << ", " << error[5]);
 
         if (!jointError || ros::Time::now() - finalPointTime >= ros::Duration(5.0))
@@ -376,6 +378,7 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
         for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
         {
           current_joint_pos[i] = jointStates.position[i];
+					current_joint_vel[i] = jointStates.velocity[i];
         }
 
         for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
@@ -409,17 +412,19 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
           // double interpVel = velocityPoints[i][timePoints.size() - 1];
           desired_velocity[i] = interpVel;
 
-          double currentPos = simplify_angle(current_joint_pos[i]);
-          error[i] = nearest_equivalent(simplify_angle(interpPos), currentPos) - currentPos;
+          //double currentPos = simplify_angle(current_joint_pos[i]);
+          error[i] = nearest_equivalent(simplify_angle(interpPos), currentPoint) - currentPoint;
+					vel_error[i] = desired_velocity[i] - current_joint_vel[i];
         }
-        double gain = 0.1;
-        cmdVel.joint1 = (desired_velocity[0] + error[0] * gain) * RAD_TO_DEG;
-        cmdVel.joint2 = (desired_velocity[1] + error[1] * gain) * RAD_TO_DEG;
-        cmdVel.joint3 = (desired_velocity[2] + error[2] * gain) * RAD_TO_DEG;
-        cmdVel.joint4 = (desired_velocity[3] + error[3] * gain) * RAD_TO_DEG;
-        cmdVel.joint5 = (desired_velocity[4] + error[4] * gain) * RAD_TO_DEG;
-        cmdVel.joint6 = (desired_velocity[5] + error[5] * gain) * RAD_TO_DEG;
-        cmdVel.joint7 = (desired_velocity[6] + error[6] * gain) * RAD_TO_DEG;
+        double p_gain = 0.0;
+	    double v_gain = 0.0;
+        cmdVel.joint1 = (desired_velocity[0] + error[0] * p_gain + vel_error[0] * v_gain) * RAD_TO_DEG;
+        cmdVel.joint2 = (desired_velocity[1] + error[1] * p_gain + vel_error[1] * v_gain) * RAD_TO_DEG;
+        cmdVel.joint3 = (desired_velocity[2] + error[2] * p_gain + vel_error[2] * v_gain) * RAD_TO_DEG;
+        cmdVel.joint4 = (desired_velocity[3] + error[3] * p_gain + vel_error[3] * v_gain) * RAD_TO_DEG;
+        cmdVel.joint5 = (desired_velocity[4] + error[4] * p_gain + vel_error[4] * v_gain) * RAD_TO_DEG;
+        cmdVel.joint6 = (desired_velocity[5] + error[5] * p_gain + vel_error[5] * v_gain) * RAD_TO_DEG;
+        cmdVel.joint7 = (desired_velocity[6] + error[6] * p_gain + vel_error[6] * v_gain) * RAD_TO_DEG;
       }
       ROS_INFO_STREAM("current velocity: " << error);
 

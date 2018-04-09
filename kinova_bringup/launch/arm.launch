@@ -11,7 +11,7 @@ Bring up the Kinova Jaco 7DOF arm.
          Keep this as false if you're including this launch file from a 
          different launch file. -->
     <arg name="standalone" default="false" />
-    <arg name="new_traj" default="true" />
+    <arg name="new_traj" default="false" />
 
     <!-- Start the low-level drvier-->
     <include file="$(find kinova_bringup)/launch/kinova_robot.launch" unless="$(arg sim)">

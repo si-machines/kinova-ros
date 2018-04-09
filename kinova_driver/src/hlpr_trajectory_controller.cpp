@@ -138,6 +138,8 @@ static inline double simplify_angle(double angle)
  *  @param desired desired joint angle [-pi, pi]
  *  @param current current angle (-inf, inf)
  *  @return the closest equivalent angle (-inf, inf)
+ *
+ *  also known as "smallest delta" or "shortest way around the circle"
  */
 static inline double nearest_equivalent(double desired, double current)
 {
@@ -215,6 +217,17 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
 
     timePoints[i] = timePoints[i - 1] + maxTime;
   }
+
+  // ROS_INFO("Computed Time Points");
+  // for (unsigned int i = 0; i < numPoints; i++)
+  //   ROS_INFO(boost::lexical_cast<std::string>(timePoints[i]).c_str());
+ 
+  // for (unsigned int i = 1; i < numPoints; i++)
+  //   timePoints[i] = goal->trajectory.points[i].time_from_start.toSec();
+
+  // ROS_INFO("MoveIt! Time Points");
+  // for (unsigned int i = 0; i < numPoints; i++)
+  //   ROS_INFO(boost::lexical_cast<std::string>(timePoints[i]).c_str());
 
   // Spline the given points to smooth the trajectory
   vector<ecl::SmoothLinearSpline> splines;
