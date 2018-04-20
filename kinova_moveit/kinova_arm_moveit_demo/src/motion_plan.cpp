@@ -1,4 +1,4 @@
-#include <moveit/move_group_interface/move_group.h>
+#include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 
 #include <moveit_msgs/DisplayRobotState.h>
@@ -28,7 +28,7 @@ int main(int argc, char **argv)
   // The :move_group_interface:`MoveGroup` class can be easily 
   // setup using just the name
   // of the group you would like to control and plan for.
-  moveit::planning_interface::MoveGroup group("arm");
+  moveit::planning_interface::MoveGroupInterface group("arm");
 
   // We will use the :planning_scene_interface:`PlanningSceneInterface`
   // class to deal directly with the world.
@@ -72,8 +72,8 @@ int main(int argc, char **argv)
   // and visualize it.
   // Note that we are just planning, not asking move_group 
   // to actually move the robot.
-  moveit::planning_interface::MoveGroup::Plan my_plan;
-  bool success = group.plan(my_plan);
+  moveit::planning_interface::MoveGroupInterface::Plan my_plan;
+  bool success = static_cast<bool>(group.plan(my_plan));
 
   ROS_INFO("Visualizing plan 1 (pose goal) %s",success?"":"FAILED");    
   /* Sleep to give Rviz time to visualize the plan. */
@@ -123,7 +123,7 @@ int main(int argc, char **argv)
   // space goal and visualize the plan.
   group_variable_values[5] = -1.0;
   group.setJointValueTarget(group_variable_values);
-  success = group.plan(my_plan);
+  success = static_cast<bool>(group.plan(my_plan));
 
   ROS_INFO("Visualizing plan 2 (joint space goal) %s",success?"":"FAILED");
   /* Sleep to give Rviz time to visualize the plan. */
@@ -173,7 +173,7 @@ int main(int argc, char **argv)
   // Now we will plan to the earlier pose target from the new 
   // start state that we have just created.
   group.setPoseTarget(target_pose1);
-  success = group.plan(my_plan);
+  success = static_cast<bool>(group.plan(my_plan));
 
   ROS_INFO("Visualizing plan 3 (constraints) %s",success?"":"FAILED");
   /* Sleep to give Rviz time to visualize the plan. */
@@ -268,7 +268,7 @@ int main(int argc, char **argv)
   // Now when we plan a trajectory it will avoid the obstacle
   group.setStartState(*group.getCurrentState());
   group.setPoseTarget(target_pose1);
-  success = group.plan(my_plan);
+  success = static_cast<bool>(group.plan(my_plan));
 
   ROS_INFO("Visualizing plan 5 (pose goal move around box) %s",
     success?"":"FAILED");

@@ -17,11 +17,11 @@ tf::Quaternion EulerZYZ_to_Quaternion(double tz1, double ty, double tz2)
     tf::Matrix3x3 rot_temp;
     rot.setIdentity();
 
-    rot_temp.setEulerZYX(tz1, 0.0, 0.0);
+    rot_temp.setEulerYPR(tz1, 0.0, 0.0);
     rot *= rot_temp;
-    rot_temp.setEulerZYX(0.0, ty, 0.0);
+    rot_temp.setEulerYPR(0.0, ty, 0.0);
     rot *= rot_temp;
-    rot_temp.setEulerZYX(tz2, 0.0, 0.0);
+    rot_temp.setEulerYPR(tz2, 0.0, 0.0);
     rot *= rot_temp;
     rot.getRotation(q);
     return q;
@@ -59,8 +59,8 @@ PickPlace::PickPlace(ros::NodeHandle &nh):
 //    robot_state::RobotState& robot_state = planning_scene_->getCurrentStateNonConst();
 //    const robot_state::JointModelGroup *joint_model_group = robot_state.getJointModelGroup("arm");
 
-    group_ = new moveit::planning_interface::MoveGroup("arm");
-    gripper_group_ = new moveit::planning_interface::MoveGroup("gripper");
+    group_ = new moveit::planning_interface::MoveGroupInterface("arm");
+    gripper_group_ = new moveit::planning_interface::MoveGroupInterface("gripper");
 
     group_->setEndEffectorLink(robot_type_ + "_end_effector");
 
@@ -638,12 +638,12 @@ void PickPlace::check_constrain()
     }
 }
 
-void PickPlace::evaluate_plan(moveit::planning_interface::MoveGroup &group)
+void PickPlace::evaluate_plan(moveit::planning_interface::MoveGroupInterface &group)
 {
     bool replan = true;
     int count = 0;
 
-    moveit::planning_interface::MoveGroup::Plan my_plan;            
+    moveit::planning_interface::MoveGroupInterface::Plan my_plan;            
 
     while (replan == true && ros::ok())
     {
@@ -659,7 +659,7 @@ void PickPlace::evaluate_plan(moveit::planning_interface::MoveGroup &group)
             plan_time = 20+count*10;
             ROS_INFO("Setting plan time to %f sec", plan_time);
             group.setPlanningTime(plan_time);
-            result_ = group.plan(my_plan);
+            result_ = static_cast<bool>(group.plan(my_plan));
             std::cout << "at attemp: " << count << std::endl;
             ros::WallDuration(0.1).sleep();
         }
