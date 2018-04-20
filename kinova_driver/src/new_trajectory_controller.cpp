@@ -416,8 +416,17 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
           error[i] = nearest_equivalent(simplify_angle(interpPos), currentPoint) - currentPoint;
 					vel_error[i] = desired_velocity[i] - current_joint_vel[i];
         }
-        double p_gain = 0.0;
-	    double v_gain = 0.0;
+        double p_gain = 0;
+	    double v_gain = 0;
+        /*
+        cmdVel.joint1 = (p_gain * error[0] + v_gain * (error[0] - prevError[0]) * RAD_TO_DEG);
+        cmdVel.joint2 = (p_gain * error[1] + v_gain * (error[1] - prevError[1]) * RAD_TO_DEG);
+        cmdVel.joint3 = (p_gain * error[2] + v_gain * (error[2] - prevError[2]) * RAD_TO_DEG);
+        cmdVel.joint4 = (p_gain * error[3] + v_gain * (error[3] - prevError[3]) * RAD_TO_DEG);
+        cmdVel.joint5 = (p_gain * error[4] + v_gain * (error[4] - prevError[4]) * RAD_TO_DEG);
+        cmdVel.joint6 = (p_gain * error[5] + v_gain * (error[5] - prevError[5]) * RAD_TO_DEG);
+        cmdVel.joint7 = (p_gain * error[6] + v_gain * (error[6] - prevError[6]) * RAD_TO_DEG);
+        */
         cmdVel.joint1 = (desired_velocity[0] + error[0] * p_gain + vel_error[0] * v_gain) * RAD_TO_DEG;
         cmdVel.joint2 = (desired_velocity[1] + error[1] * p_gain + vel_error[1] * v_gain) * RAD_TO_DEG;
         cmdVel.joint3 = (desired_velocity[2] + error[2] * p_gain + vel_error[2] * v_gain) * RAD_TO_DEG;

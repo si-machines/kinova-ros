@@ -1,5 +1,8 @@
 #include <kinova_driver/jaco_trajectory_controller.h>
 
+#include <iostream>
+#include <fstream>
+
 using namespace std;
 
 JacoTrajectoryController::JacoTrajectoryController() : pnh("~"),
@@ -165,69 +168,31 @@ static inline double nearest_equivalent(double desired, double current)
 
 void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::FollowJointTrajectoryGoalConstPtr &goal)
 {
-  float trajectoryPoints[NUM_JACO_JOINTS][goal->trajectory.points.size()];
   int numPoints = goal->trajectory.points.size();
+  vector< ecl::Array<double> > jointPoints;
+  jointPoints.resize(NUM_JACO_JOINTS);
+  for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
+  {
+    jointPoints[i].resize(numPoints);
+  }
+
+  ecl::Array<double> timePoints(numPoints);
 
   //get trajectory data
   for (unsigned int i = 0; i < numPoints; i++)
   {
-    for (int trajectoryIndex = 0; trajectoryIndex < goal->trajectory.joint_names.size(); trajectoryIndex ++)
+    timePoints[i] = goal->trajectory.points[i].time_from_start.toSec();
+    
+    for (int trajectoryIndex = 0; trajectoryIndex < goal->trajectory.joint_names.size(); trajectoryIndex++)
     {
       string jointName = goal->trajectory.joint_names[trajectoryIndex];
       int jointIndex = distance(jointNames.begin(), find(jointNames.begin(), jointNames.end(), jointName));
       if (jointIndex >= 0 && jointIndex < NUM_JACO_JOINTS)
       {
-        trajectoryPoints[jointIndex][i] = goal->trajectory.points.at(i).positions.at(trajectoryIndex);
+        jointPoints[jointIndex][i] = goal->trajectory.points.at(i).positions.at(trajectoryIndex);
       }
     }
   }
-
-  //initialize arrays needed to fit a smooth trajectory to the given points
-  ecl::Array<double> timePoints(numPoints);
-  timePoints[0] = 0.0;
-  vector<ecl::Array<double> > jointPoints;
-  jointPoints.resize(NUM_JACO_JOINTS);
-  float prevPoint[NUM_JACO_JOINTS];
-  for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
-  {
-    jointPoints[i].resize(numPoints);
-    jointPoints[i][0] = trajectoryPoints[i][0];
-    prevPoint[i] = trajectoryPoints[i][0];
-  }
-
-  //determine time component of trajectories for each joint
-  for (unsigned int i = 1; i < numPoints; i++)
-  {
-    float maxTime = 0.0;
-    for (unsigned int j = 0; j < NUM_JACO_JOINTS; j++)
-    {
-      //calculate approximate time required to move to the next position
-      float time = fabs(trajectoryPoints[j][i] - prevPoint[j]);
-      if (j <= 3)
-        time /= (LARGE_ACTUATOR_VELOCITY*0.9);  // run slightly below max speed
-      else
-        time /= (SMALL_ACTUATOR_VELOCITY*0.9);  // run slightly below max speed
-
-      if (time > maxTime)
-        maxTime = time;
-
-      jointPoints[j][i] = trajectoryPoints[j][i];
-      prevPoint[j] = trajectoryPoints[j][i];
-    }
-
-    timePoints[i] = timePoints[i - 1] + maxTime;
-  }
-
-  // ROS_INFO("Computed Time Points");
-  // for (unsigned int i = 0; i < numPoints; i++)
-  //   ROS_INFO(boost::lexical_cast<std::string>(timePoints[i]).c_str());
- 
-  // for (unsigned int i = 1; i < numPoints; i++)
-  //   timePoints[i] = goal->trajectory.points[i].time_from_start.toSec();
-
-  // ROS_INFO("MoveIt! Time Points");
-  // for (unsigned int i = 0; i < numPoints; i++)
-  //   ROS_INFO(boost::lexical_cast<std::string>(timePoints[i]).c_str());
 
   // Spline the given points to smooth the trajectory
   vector<ecl::SmoothLinearSpline> splines;
@@ -256,7 +221,7 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
       cubic_splines.at(i) = tempSpline;
     }
   }
-
+  
   //control loop
   bool trajectoryComplete = false;
   double startTime = ros::Time::now().toSec();
