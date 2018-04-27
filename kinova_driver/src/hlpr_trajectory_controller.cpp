@@ -1,7 +1,7 @@
 #include <kinova_driver/jaco_trajectory_controller.h>
 
+#include <dynamic_reconfigure/Reconfigure.h>
 #include <iostream>
-#include <fstream>
 
 using namespace std;
 
@@ -178,12 +178,14 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
 
   ecl::Array<double> timePoints(numPoints);
 
-  //get trajectory data
+  // TODO: Handle filling in current state for non-moving/non-included joints
+
+  // get trajectory data
   for (unsigned int i = 0; i < numPoints; i++)
   {
     timePoints[i] = goal->trajectory.points[i].time_from_start.toSec();
     
-    for (int trajectoryIndex = 0; trajectoryIndex < goal->trajectory.joint_names.size(); trajectoryIndex++)
+    for (unsigned int trajectoryIndex = 0; trajectoryIndex < goal->trajectory.joint_names.size(); trajectoryIndex++)
     {
       string jointName = goal->trajectory.joint_names[trajectoryIndex];
       int jointIndex = distance(jointNames.begin(), find(jointNames.begin(), jointNames.end(), jointName));
@@ -191,6 +193,69 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
       {
         jointPoints[jointIndex][i] = goal->trajectory.points.at(i).positions.at(trajectoryIndex);
       }
+    }
+  }
+
+  // Gather timing corrections
+  float correctedTime[numPoints] = { };
+  for (unsigned int i = 1; i < numPoints; i++)
+  {
+    float maxTime = 0.0;
+    float vel = 0.0;
+
+    float plannedTime = timePoints[i] - timePoints[i-1];
+    bool validTime = plannedTime > 0;
+
+    for (unsigned int j = 0; j < NUM_JACO_JOINTS; j++)
+    {
+      float time = fabs(jointPoints[j][i] - jointPoints[j][i-1]);
+      if (plannedTime > 0)
+        vel = fabs(jointPoints[j][i] - jointPoints[j][i-1]) / plannedTime;
+
+      if (j <= 3)
+      {
+        time /= 0.9*LARGE_ACTUATOR_VELOCITY;
+        if (plannedTime > 0 && vel > 0.9*LARGE_ACTUATOR_VELOCITY)
+          validTime = false;
+      }
+      else
+      {
+        time /= 0.9*SMALL_ACTUATOR_VELOCITY;
+        if (plannedTime > 0 && vel > 0.9*SMALL_ACTUATOR_VELOCITY)
+          validTime = false;
+      }
+
+      if (time > maxTime)
+        maxTime = time;
+    }
+
+    if (!validTime)
+      correctedTime[i] = maxTime;
+  }
+
+  // Apply timing corrections
+  for (unsigned int i = 1; i < numPoints; i++)
+  {
+    correctedTime[i] += correctedTime[i-1];
+    timePoints[i] += correctedTime[i];
+  }
+
+  // Print warning if time corrections applied
+  if (correctedTime[numPoints-1] > 0)
+  {
+    ROS_WARN("Warning: Timing of joint trajectory violates max velocities, using computed time"); 
+    if (ros::service::exists("/move_group/trajectory_execution/set_parameters", false))
+    {
+      dynamic_reconfigure::ReconfigureRequest req;
+      dynamic_reconfigure::ReconfigureResponse resp;
+
+      ros::service::call("/move_group/trajectory_execution/set_parameters", req, resp);
+
+      //std::list<dynamic_reconfigure::DoubleParameter>::iterator it;
+      //for (it = resp.config.bools.begin(); it != resp.config.bools.end(); ++it)
+      for (auto const& it : resp.config.bools)
+        if (it.name == "execution_duration_monitoring" && it.value)
+          ROS_WARN("Warning: Execution duration monitoring turned on. This may cause trajectory to be premempted before completion.");
     }
   }
 
