@@ -178,13 +178,12 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
 
   ecl::Array<double> timePoints(numPoints);
 
-  // TODO: Handle filling in current state for non-moving/non-included joints
-
   // get trajectory data
   for (unsigned int i = 0; i < numPoints; i++)
   {
+    bool includedJoints[NUM_JACO_JOINTS] = { };
     timePoints[i] = goal->trajectory.points[i].time_from_start.toSec();
-    
+
     for (unsigned int trajectoryIndex = 0; trajectoryIndex < goal->trajectory.joint_names.size(); trajectoryIndex++)
     {
       string jointName = goal->trajectory.joint_names[trajectoryIndex];
@@ -192,8 +191,14 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
       if (jointIndex >= 0 && jointIndex < NUM_JACO_JOINTS)
       {
         jointPoints[jointIndex][i] = goal->trajectory.points.at(i).positions.at(trajectoryIndex);
+        includedJoints[jointIndex] = true;
       }
     }
+
+    // Fill non-included joints with current joint state
+    for (unsigned int j = 0; j < NUM_JACO_JOINTS; j++)
+      if (!includedJoints[j])
+        jointPoints[j][i] = jointStates.position[j];
   }
 
   // Gather timing corrections
@@ -251,8 +256,6 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
 
       ros::service::call("/move_group/trajectory_execution/set_parameters", req, resp);
 
-      //std::list<dynamic_reconfigure::DoubleParameter>::iterator it;
-      //for (it = resp.config.bools.begin(); it != resp.config.bools.end(); ++it)
       for (auto const& it : resp.config.bools)
         if (it.name == "execution_duration_monitoring" && it.value)
           ROS_WARN("Warning: Execution duration monitoring turned on. This may cause trajectory to be premempted before completion.");
