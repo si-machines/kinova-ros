@@ -11,7 +11,6 @@ Bring up the Kinova Jaco 7DOF arm.
          Keep this as false if you're including this launch file from a 
          different launch file. -->
     <arg name="standalone" default="false" />
-    <arg name="new_traj" default="false" />
 
     <!-- Start the low-level drvier-->
     <include file="$(find kinova_bringup)/launch/kinova_robot.launch" unless="$(arg sim)">
@@ -21,11 +20,7 @@ Bring up the Kinova Jaco 7DOF arm.
     </include>
 
     <!-- Custom HLPR trajectory server -->
-    <node pkg="kinova_driver" type="hlpr_trajectory_controller" name="jaco_trajectory_controller" output="screen"  respawn="true" launch-prefix="xterm -e gdb -ex run -args" unless="$(arg new_traj)">
-        <param name="sim" value="$(arg sim)"/>
-    </node>
-
-    <node pkg="kinova_driver" type="new_trajectory_controller" name="jaco_trajectory_controller" output="screen"  respawn="true" launch-prefix="xterm -e gdb -ex run -args" if="$(arg new_traj)">
+    <node pkg="kinova_driver" type="hlpr_trajectory_controller" name="jaco_trajectory_controller" output="screen"  respawn="true">
         <param name="sim" value="$(arg sim)"/>
     </node>
 
