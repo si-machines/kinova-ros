@@ -1,4 +1,5 @@
-# IMPORTANT
+# THIS FORK IS ONLY USED FOR POLI2 RIGHT NOW
+## IMPORTANT
 
 kinova-driver release 1.2.0.
 
