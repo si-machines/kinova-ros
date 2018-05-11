@@ -305,10 +305,9 @@ bool KinovaArm::setTorqueControlModeService(kinova_msgs::SetTorqueControlMode::R
     kinova_comm_.SetTorqueControlState(req.state);
 
     bool is_arm_vertical;
-    node_handle_.param("is_arm_vertical",
-                              is_arm_vertical,true);
+    node_handle_.param("is_arm_vertical", is_arm_vertical,true);
     if(is_arm_vertical){
-	float GravityVector[3];
+	    float GravityVector[3];
         GravityVector[0] = 0;
         GravityVector[1] = 0;
         GravityVector[2] = -9.81;
