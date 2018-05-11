@@ -201,7 +201,7 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
         jointPoints[j][i] = jointStates.position[j];
   }
 
-  // Gather timing corrections
+  // Gather timing corrections for trajectory segments that violate max velocity
   float correctedTime[numPoints] = { };
   for (unsigned int i = 1; i < numPoints; i++)
   {
