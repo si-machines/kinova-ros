@@ -18,7 +18,7 @@ find_package(catkin REQUIRED dynamic_reconfigure COMPONENTS
   cmake_modules
 )
 
-find_package(Eigen REQUIRED)
+find_package(Eigen3 REQUIRED)
 generate_dynamic_reconfigure_options(
   #cfg/KinovaPositionConfig.cfg
 )
@@ -30,7 +30,7 @@ catkin_package(
   INCLUDE_DIRS include
   LIBRARIES kinova_driver
   CATKIN_DEPENDS actionlib actionlib_msgs geometry_msgs kinova_msgs roscpp rospy sensor_msgs std_msgs tf interactive_markers visualization_msgs
-  DEPENDS Eigen
+  DEPENDS EIGEN3
 #  DEPENDS system_lib
 )
 
