@@ -13,11 +13,11 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
-  <build_depend>robotiq_85_gripper_description</build_depend>
+  <build_depend>robotiq_85_description</build_depend>
   <build_depend>urdf</build_depend>
   <build_depend>xacro</build_depend>
 
-  <run_depend>robotiq_85_gripper_description</run_depend>
+  <run_depend>robotiq_85_description</run_depend>
   <run_depend>urdf</run_depend>
   <run_depend>xacro</run_depend>
 
