@@ -2,36 +2,26 @@
 <launch>
 
   <arg name="use_urdf" default="true"/>
-  <arg name="kinova_robotType" default="j2n6s300" />
+  <arg name="kinova_robotType" default="j2n7s300" />
   <arg name="kinova_robotName" default="$(arg kinova_robotType)"/>
   <arg name="kinova_robotSerial" default="not_set" />
-  <arg name="kinova_gripper" default="False"/>
-  <arg name="status_interval_seconds" default="0.01"/>
-  <arg name="status_interval_seconds_torques" default="0.02"/>
-  <arg name="gf_effort" default="True"/>
 
   <!-- If the node handles multiple robots uncomment this and configure /config/multiple_robots.yaml" -->
   <!--rosparam file="$(find kinova_bringup)/launch/config/multiple_robots.yaml" command="load" /-->
 
-  <node name="$(arg kinova_robotName)_driver" pkg="kinova_driver" type="kinova_arm_driver" output="screen" cwd="node" args="$(arg kinova_robotType)" respawn="true">
+  <node name="$(arg kinova_robotName)_driver" pkg="kinova_driver" type="kinova_arm_driver" output="screen" cwd="node" args="$(arg kinova_robotType)">
     <rosparam file="$(find kinova_bringup)/launch/config/robot_parameters.yaml" command="load" />
     <param name="serial_number" value="$(arg kinova_robotSerial)" />   
     <param name="robot_name" value="$(arg kinova_robotName)" />   
-    <param name="robot_type" value="$(arg kinova_robotType)" />
-    <param name="status_interval_seconds" value="$(arg status_interval_seconds)" />
-    <!-- WARN: we have a sparate status for joint torques being published. Assume they are not
-	as critical as the torques selected in joint states, etc.
-	This value cannot be smaller than 0.02 to guarantee
-	100hz publishing for joint states and velocity information -->
-    <param name="status_interval_seconds_torques" value="$(arg status_interval_seconds_torques)" />
-    <param name="kinova_gripper" value="$(arg kinova_gripper)" />
-    <!-- This flag sets whether joint_states topic containts gravity compensated effort. For the effort
-	 not in joint_states, it is published in its own topic at a separate rate -->
-    <param name="gf_effort" value="$(arg gf_effort)" />
+    <param name="robot_type" value="$(arg kinova_robotType)" />   
   </node>
 
-  <!-- this basically looks like a worse version of robot_state_publisher, which already
-       gets run elsewhere. -->
+  <!-- Joint state publisher since we typically say "use_urdf" to false
+  <node name="kinova_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+    <param name="use_gui" value="false" />
+    <rosparam param="source_list">[j2s7s300_driver/out/joint_state]</rosparam>
+  </node>
+  -->
   <!--
   <group unless="$(arg use_urdf)">
     <node name="$(arg kinova_robotName)_tf_updater" pkg="kinova_driver" type="kinova_tf_updater" output="screen" cwd="node" args="$(arg kinova_robotType)">
@@ -42,22 +32,21 @@
   -->
 
   <group if="$(arg use_urdf)">
-    <param name="robot_description" command="$(find xacro)/xacro.py --inorder '$(find kinova_description)/urdf/$(arg kinova_robotType)_standalone.xacro'" />
+    <!--param name="robot_description" command="$(find xacro)/xacro.py '$(find kinova_description)/urdf/$(arg kinova_robotType)_standalone.xacro'" /-->
 
-    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
+    <!--node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
       <param name="publish_frequency" type="double" value="100" />
-    </node>
-    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+    </node-->
+    <!--node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
       <param name="use_gui" value="false" />
-      <param name="rate" value="100" />
       <rosparam param="source_list">[j2s7s300_driver/out/joint_state, gripper/joint_states, vector/joint_states]</rosparam>
-    </node>
+    </node-->
     
-    <node name="$(arg kinova_robotName)_state_publisher"
+    <!--node name="$(arg kinova_robotName)_state_publisher"
            pkg="robot_state_publisher"
           type="robot_state_publisher">
       <remap from="joint_states" to="/$(arg kinova_robotName)_driver/out/joint_state"/>
-    </node>
+    </node-->
   </group>
 
 </launch>
