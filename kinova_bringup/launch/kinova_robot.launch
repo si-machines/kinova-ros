@@ -32,7 +32,12 @@
   -->
 
   <group if="$(arg use_urdf)">
-    <!--param name="robot_description" command="$(find xacro)/xacro.py --inorder '$(find kinova_description)/urdf/$(arg kinova_robotType)_standalone.xacro'" /-->
+  	<!-- In the following command, "xacro.py" should be followed by
+  	     "- -inorder", but without the space between the dashes.
+  	     This is not possible because of how XML comments work.
+  	     If you uncomment the following line, add back the inorder
+  	     flag. -->
+    <!--param name="robot_description" command="$(find xacro)/xacro.py  '$(find kinova_description)/urdf/$(arg kinova_robotType)_standalone.xacro'" /-->
 
     <!--node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
       <param name="publish_frequency" type="double" value="100" />
