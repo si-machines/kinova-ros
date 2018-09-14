@@ -202,7 +202,7 @@
         </transmission>
 
         <xacro:robotiq_85_gripper prefix="" parent="${prefix}_ee_base">
-          <origin xyz="0 0 0" rpy="0 0 0" />
+          <origin xyz="0 0 0" rpy="${J_PI/2} 0 0" />
         </xacro:robotiq_85_gripper>
 
     </xacro:macro>
