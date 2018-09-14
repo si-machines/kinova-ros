@@ -1,8 +1,5 @@
 #include <kinova_driver/jaco_trajectory_controller.h>
 
-#include <dynamic_reconfigure/Reconfigure.h>
-#include <iostream>
-
 using namespace std;
 
 JacoTrajectoryController::JacoTrajectoryController() : pnh("~"),
@@ -141,8 +138,6 @@ static inline double simplify_angle(double angle)
  *  @param desired desired joint angle [-pi, pi]
  *  @param current current angle (-inf, inf)
  *  @return the closest equivalent angle (-inf, inf)
- *
- *  also known as "smallest delta" or "shortest way around the circle"
  */
 static inline double nearest_equivalent(double desired, double current)
 {
@@ -168,128 +163,67 @@ static inline double nearest_equivalent(double desired, double current)
 
 void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::FollowJointTrajectoryGoalConstPtr &goal)
 {
+  float trajectoryPoints[NUM_JACO_JOINTS][goal->trajectory.points.size()];
   int numPoints = goal->trajectory.points.size();
-  vector< ecl::Array<double> > jointPoints;
-  jointPoints.resize(NUM_JACO_JOINTS);
-  for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
-  {
-    jointPoints[i].resize(numPoints);
-  }
 
-  ecl::Array<double> timePoints(numPoints);
-
-  // get trajectory data
+  //get trajectory data
   for (unsigned int i = 0; i < numPoints; i++)
   {
-    bool includedJoints[NUM_JACO_JOINTS] = { };
-    timePoints[i] = goal->trajectory.points[i].time_from_start.toSec();
-
-    for (unsigned int trajectoryIndex = 0; trajectoryIndex < goal->trajectory.joint_names.size(); trajectoryIndex++)
+    for (int trajectoryIndex = 0; trajectoryIndex < goal->trajectory.joint_names.size(); trajectoryIndex ++)
     {
       string jointName = goal->trajectory.joint_names[trajectoryIndex];
       int jointIndex = distance(jointNames.begin(), find(jointNames.begin(), jointNames.end(), jointName));
       if (jointIndex >= 0 && jointIndex < NUM_JACO_JOINTS)
       {
-        jointPoints[jointIndex][i] = goal->trajectory.points.at(i).positions.at(trajectoryIndex);
-        includedJoints[jointIndex] = true;
+        trajectoryPoints[jointIndex][i] = goal->trajectory.points.at(i).positions.at(trajectoryIndex);
       }
     }
-
-    // Fill non-included joints with current joint state
-    for (unsigned int j = 0; j < NUM_JACO_JOINTS; j++)
-      if (!includedJoints[j])
-        jointPoints[j][i] = jointStates.position[j];
   }
 
-  // Gather timing corrections for trajectory segments that violate max velocity
-  float correctedTime[numPoints] = { };
+  //initialize arrays needed to fit a smooth trajectory to the given points
+  ecl::Array<double> timePoints(numPoints);
+  timePoints[0] = 0.0;
+  vector<ecl::Array<double> > jointPoints;
+  jointPoints.resize(NUM_JACO_JOINTS);
+  float prevPoint[NUM_JACO_JOINTS];
+  for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
+  {
+    jointPoints[i].resize(numPoints);
+    jointPoints[i][0] = trajectoryPoints[i][0];
+    prevPoint[i] = trajectoryPoints[i][0];
+  }
+
+  //determine time component of trajectories for each joint
   for (unsigned int i = 1; i < numPoints; i++)
   {
     float maxTime = 0.0;
-    float vel = 0.0;
-
-    float plannedTime = timePoints[i] - timePoints[i-1];
-    bool validTime = plannedTime > 0;
-
     for (unsigned int j = 0; j < NUM_JACO_JOINTS; j++)
     {
-      float time = fabs(jointPoints[j][i] - jointPoints[j][i-1]);
-      if (plannedTime > 0)
-        vel = fabs(jointPoints[j][i] - jointPoints[j][i-1]) / plannedTime;
-
+      //calculate approximate time required to move to the next position
+      float time = fabs(trajectoryPoints[j][i] - prevPoint[j]);
       if (j <= 3)
-      {
-        time /= 0.9*LARGE_ACTUATOR_VELOCITY;
-        if (plannedTime > 0 && vel > 0.9*LARGE_ACTUATOR_VELOCITY)
-          validTime = false;
-      }
+        time /= LARGE_ACTUATOR_VELOCITY;
       else
-      {
-        time /= 0.9*SMALL_ACTUATOR_VELOCITY;
-        if (plannedTime > 0 && vel > 0.9*SMALL_ACTUATOR_VELOCITY)
-          validTime = false;
-      }
+        time /= SMALL_ACTUATOR_VELOCITY;
 
       if (time > maxTime)
         maxTime = time;
+
+      jointPoints[j][i] = trajectoryPoints[j][i];
+      prevPoint[j] = trajectoryPoints[j][i];
     }
 
-    if (!validTime)
-      correctedTime[i] = maxTime;
+    timePoints[i] = timePoints[i - 1] + maxTime * TIME_SCALING_FACTOR;
   }
 
-  // Apply timing corrections
-  for (unsigned int i = 1; i < numPoints; i++)
-  {
-    correctedTime[i] += correctedTime[i-1];
-    timePoints[i] += correctedTime[i];
-  }
-
-  // Print warning if time corrections applied
-  if (correctedTime[numPoints-1] > 0)
-  {
-    ROS_WARN("Warning: Timing of joint trajectory violates max velocities, using computed time"); 
-    if (ros::service::exists("/move_group/trajectory_execution/set_parameters", false))
-    {
-      dynamic_reconfigure::ReconfigureRequest req;
-      dynamic_reconfigure::ReconfigureResponse resp;
-
-      ros::service::call("/move_group/trajectory_execution/set_parameters", req, resp);
-
-      for (auto const& it : resp.config.bools)
-        if (it.name == "execution_duration_monitoring" && it.value)
-          ROS_WARN("Warning: Execution duration monitoring turned on. This may cause trajectory to be premempted before completion.");
-    }
-  }
-
-  // Spline the given points to smooth the trajectory
   vector<ecl::SmoothLinearSpline> splines;
   splines.resize(NUM_JACO_JOINTS);
+  for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
+  {
+    ecl::SmoothLinearSpline tempSpline(timePoints, jointPoints[i], maxCurvature);
+    splines.at(i) = tempSpline;
+  }
 
-  // Setup cubic storage in case
-  vector<ecl::CubicSpline> cubic_splines;
-  cubic_splines.resize(NUM_JACO_JOINTS);
-  cubic_flag_=false;
-  try
-  {
-    for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
-    {
-      ecl::SmoothLinearSpline tempSpline(timePoints, jointPoints[i], maxCurvature);
-      splines.at(i) = tempSpline;
-    }
-  }
-  catch (...) // This catches ALL exceptions
-  {
-    
-    cubic_flag_= true;
-    ROS_WARN("WARNING: Performing cubic spline rather than smooth linear because of crash");
-    for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
-    {
-      ecl::CubicSpline tempSpline = ecl::CubicSpline::Natural(timePoints, jointPoints[i]);
-      cubic_splines.at(i) = tempSpline;
-    }
-  }
-  
   //control loop
   bool trajectoryComplete = false;
   double startTime = ros::Time::now().toSec();
@@ -326,16 +260,14 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
     // Check the total error to determine if the trajectory finished
     totalError = 1.0;
     float prevError = 0.0;
-    bool jointError = true;
-    while (abs(totalError - prevError) > 0.001 && jointError)
-    {
+    while (abs(totalError -prevError) > 0.001 && totalError > 0.03){
         prevError = totalError;
 
         // Copy from joint_state publisher to current joints
         for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
-        {
+        {   
           current_joint_pos[i] = jointStates.position[i];
-        }
+        } 
 
         // Compute total error of all joints away from last position
         totalError = 0;
@@ -344,7 +276,6 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
           currentPoint = simplify_angle(current_joint_pos[i]);
           error[i] = nearest_equivalent(simplify_angle(goal->trajectory.points[numPoints-1].positions[i]),currentPoint) - currentPoint;
           totalError += fabs(error[i]);
-          jointError = jointError || error[i] > ERROR_THRESHOLD;
         }
 
     // Rate to check if error has changed
@@ -409,32 +340,17 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
           current_joint_pos[i] = jointStates.position[i];
         }
 
-        bool jointError = false;
-        double maxError = 0;
+        totalError = 0;
         for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
         {
           currentPoint = simplify_angle(current_joint_pos[i]);
-
-          // Check if we're using a cubic or a linear spline
-          double splineValue;
-          if (cubic_flag_)
-          {
-            splineValue = (cubic_splines.at(i))(timePoints.at(timePoints.size() - 1));
-          }
-          else
-          {
-            splineValue = (splines.at(i))(timePoints.at(timePoints.size() - 1));
-          }
-          // Now generate the value
-          error[i] = nearest_equivalent(simplify_angle(splineValue),
+          error[i] = nearest_equivalent(simplify_angle((splines.at(i))(timePoints.at(timePoints.size() - 1))),
                                         currentPoint) - currentPoint;
-          jointError = jointError || fabs(error[i]) > ERROR_THRESHOLD;
+          totalError += fabs(error[i]);
         }
 
-        if (!jointError || ros::Time::now() - finalPointTime >= ros::Duration(3.0))
+        if (totalError < .035 || ros::Time::now() - finalPointTime >= ros::Duration(3.0))
         {
-          cout << "Errors: " << error[0] << ", " << error[1] << ", " << error[2] << ", " << error[3] << ", " << error[4] << ", " << error[5] << endl;
-          cout << "Positions: " << simplify_angle(current_joint_pos[0]) << ", " << simplify_angle(current_joint_pos[1]) << ", " << simplify_angle(current_joint_pos[2]) << ", " << simplify_angle(current_joint_pos[3]) << ", " << simplify_angle(current_joint_pos[4]) << ", " << simplify_angle(current_joint_pos[5]);
           //stop arm
           trajectoryPoint.joint1 = 0.0;
           trajectoryPoint.joint2 = 0.0;
@@ -466,17 +382,7 @@ void JacoTrajectoryController::executeSmoothTrajectory(const control_msgs::Follo
         for (unsigned int i = 0; i < NUM_JACO_JOINTS; i++)
         {
           currentPoint = simplify_angle(current_joint_pos[i]);
-          // Check if we're using a cubic or a linear spline
-          double splineValue;
-          if (cubic_flag_)
-          {
-            splineValue = (cubic_splines.at(i))(t);
-          }
-          else
-          {
-            splineValue = (splines.at(i))(t);
-          }
-          error[i] = nearest_equivalent(simplify_angle(splineValue), currentPoint) - currentPoint;
+          error[i] = nearest_equivalent(simplify_angle((splines.at(i))(t)), currentPoint) - currentPoint;
         }
       }
 
