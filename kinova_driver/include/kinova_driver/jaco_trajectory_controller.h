@@ -15,8 +15,8 @@
 
 #define NUM_JACO_JOINTS 7
 
-#define LARGE_ACTUATOR_VELOCITY 0.628 //maximum velocity of large actuator (joints 1-3) (rad/s)
-#define SMALL_ACTUATOR_VELOCITY 0.838 //maximum velocity of small actuator (joints 4-6) (rad/s)
+#define LARGE_ACTUATOR_VELOCITY 0.428 //maximum velocity of large actuator (joints 1-3) (rad/s)
+#define SMALL_ACTUATOR_VELOCITY 0.638 //maximum velocity of small actuator (joints 4-6) (rad/s)
 #define TIME_SCALING_FACTOR 1.75 //keep the trajectory at a followable speed
 
 #define DEG_TO_RAD (M_PI/180)
