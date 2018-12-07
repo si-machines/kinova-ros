@@ -238,7 +238,7 @@ KinovaArm::KinovaArm(KinovaComm &arm, const ros::NodeHandle &nodeHandle, const s
     cartesian_force_subscriber_ = node_handle_.subscribe("in/cartesian_force", 1,
                                   &KinovaArm::forceSubscriberCallback, this);
 
-    node_handle_.param<double>("status_interval_seconds", status_interval_seconds_, 0.01);
+    node_handle_.param<double>("status_interval_seconds", status_interval_seconds_, 0.1);
 
     ROS_INFO("Status interval (seconds): %f", status_interval_seconds_);
 
