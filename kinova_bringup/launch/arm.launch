@@ -15,7 +15,19 @@
     </include>
 
     <!-- Start the trajectory server driver -->
-    <node pkg="kinova_driver" type="hlpr_trajectory_controller" name="jaco_trajectory_controller" output="screen">
+<!--     <node
+        launch-prefix="xterm -e gdb -ex run &#45;&#45;args"
+        pkg="kinova_driver"
+        type="hlpr_trajectory_controller"
+        name="jaco_trajectory_controller"
+        output="screen"
+    > -->
+    <node
+        pkg="kinova_driver"
+        type="hlpr_trajectory_controller"
+        name="jaco_trajectory_controller"
+        output="screen"
+    >
         <param name="sim" value="$(arg sim)"/>
     </node>
 
