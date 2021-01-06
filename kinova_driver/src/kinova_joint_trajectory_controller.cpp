@@ -17,24 +17,24 @@ JointTrajectoryController::JointTrajectoryController(kinova::KinovaComm &kinova_
     number_joint_ =robot_type[3] - '0';
 
     // Display debug information in teminal
-    if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
-        ros::console::notifyLoggerLevelsChanged();
-    }
+    // if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
+    //     ros::console::notifyLoggerLevelsChanged();
+    // }
 
     sub_command_ = nh_.subscribe("trajectory_controller/command", 1, &JointTrajectoryController::commandCB, this);
 
     pub_joint_feedback_ = nh_.advertise<control_msgs::FollowJointTrajectoryFeedback>("trajectory_controller/state", 1);
     pub_joint_velocity_ = pn.advertise<kinova_msgs::JointVelocity>("in/joint_velocity", 2);
 
-    traj_frame_id_ = "root";   
+    traj_frame_id_ = "root";
     joint_names_.resize(number_joint_);
-    //std::cout << "joint names in feedback of trajectory state are: " << std::endl;
+    std::string print_str_ = "Joint names in feedback of trajectory state are: ";
     for (uint i = 0; i<joint_names_.size(); i++)
     {
         joint_names_[i] = prefix_ + "_joint_" + boost::lexical_cast<std::string>(i+1);
-        std::cout << joint_names_[i] << " ";
+        print_str_ += joint_names_[i] + " ";
     }
-    std::cout << std::endl;
+    ROS_INFO_STREAM(print_str_);
 
     timer_pub_joint_vel_ = nh_.createTimer(ros::Duration(0.01), &JointTrajectoryController::pub_joint_vel, this, false, false);
     terminate_thread_ = false;

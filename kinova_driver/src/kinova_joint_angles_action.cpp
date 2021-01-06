@@ -88,10 +88,10 @@ void KinovaAnglesActionServer::actionCallback(const kinova_msgs::ArmJointAnglesG
 
         if (arm_comm_.isStopped())
         {
-            ROS_INFO("Could not complete joint angle action because the arm is 'stopped'.");
+            ROS_WARN("Could not complete joint angle action because the arm is 'stopped'.");
             result.angles = current_joint_angles.constructAnglesMsg();
             action_server_.setAborted(result);
-            ROS_WARN_STREAM(__PRETTY_FUNCTION__ << ": LINE " << __LINE__ << ", setAborted ");
+            ROS_DEBUG_STREAM(__PRETTY_FUNCTION__ << ": LINE " << __LINE__ << ", setAborted ");
             return;
         }
 
@@ -111,7 +111,7 @@ void KinovaAnglesActionServer::actionCallback(const kinova_msgs::ArmJointAnglesG
             {
                 result.angles = current_joint_angles.constructAnglesMsg();
                 action_server_.setAborted(result);
-                ROS_WARN_STREAM(__PRETTY_FUNCTION__ << ": LINE " << __LINE__ << ", setAborted ");
+                ROS_DEBUG_STREAM(__PRETTY_FUNCTION__ << ": LINE " << __LINE__ << ", setAborted ");
                 return;
             }
             else if (action_server_.isPreemptRequested() || !ros::ok())
@@ -120,7 +120,7 @@ void KinovaAnglesActionServer::actionCallback(const kinova_msgs::ArmJointAnglesG
                 arm_comm_.stopAPI();
                 arm_comm_.startAPI();
                 action_server_.setPreempted(result);
-                ROS_WARN_STREAM(__PRETTY_FUNCTION__ << ": LINE " << __LINE__ << ", setPreempted ");
+                ROS_DEBUG_STREAM(__PRETTY_FUNCTION__ << ": LINE " << __LINE__ << ", setPreempted ");
                 return;
             }
 
@@ -134,7 +134,7 @@ void KinovaAnglesActionServer::actionCallback(const kinova_msgs::ArmJointAnglesG
                 // Check if the action has succeeeded
                 result.angles = current_joint_angles.constructAnglesMsg();
                 action_server_.setSucceeded(result);
-                ROS_WARN_STREAM(__PRETTY_FUNCTION__ << ": LINE " << __LINE__ << ", setSucceeded ");
+                ROS_DEBUG_STREAM(__PRETTY_FUNCTION__ << ": LINE " << __LINE__ << ", setSucceeded ");
                 return;
             }
             else if (!last_nonstall_angles_.isCloseToOther(current_joint_angles, stall_threshold_))

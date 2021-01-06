@@ -50,6 +50,20 @@
 #include <tf/tf.h>
 #include <arpa/inet.h>
 
+#include <algorithm>
+#include <functional>
+#include <cctype>
+#include <locale>
+
+static inline std::string &rtrim(std::string &s)
+{
+    s.erase(std::find_if(s.rbegin(), s.rend(),
+                         std::not1(std::ptr_fun<int, int>(std::isspace)))
+                .base(),
+            s.end());
+    return s;
+}
+
 namespace kinova
 {
 
@@ -133,9 +147,13 @@ KinovaComm::KinovaComm(const ros::NodeHandle& node_handle,
     bool found_arm = false;
     for (int device_i = 0; device_i < devices_count; device_i++)
     {
+        // need to trim the serial number because some of them have different lengths
+        std::string trimmedSerial = std::string(devices_list_[device_i].SerialNumber);
+        rtrim(trimmedSerial);
+
         // If no device is specified, just use the first available device
         if (serial_number == "" || serial_number == "not_set" ||
-            std::strcmp(serial_number.c_str(), devices_list_[device_i].SerialNumber) == 0)
+            serial_number == trimmedSerial)
         {
             result = kinova_api_.setActiveDevice(devices_list_[device_i]);
             if (result != NO_ERROR_KINOVA)
@@ -161,6 +179,7 @@ KinovaComm::KinovaComm(const ros::NodeHandle& node_handle,
             ROS_INFO_STREAM("Found " << devices_count << " device(s), using device at index " << device_i
                             << " (model: " << configuration.Model
                             << ", serial number: " << devices_list_[device_i].SerialNumber
+                            << " (trimmed to " << trimmedSerial << ")" 
                             << ", code version: " << general_info.CodeVersion
                             << ", code revision: " << general_info.CodeRevision << ")");
 

@@ -11,12 +11,12 @@
 
   <node name="$(arg kinova_robotName)_driver" pkg="kinova_driver" type="kinova_arm_driver" output="screen" cwd="node" args="$(arg kinova_robotType)">
     <rosparam file="$(find kinova_bringup)/launch/config/robot_parameters.yaml" command="load" />
-    <param name="serial_number" value="$(arg kinova_robotSerial)" />   
-    <param name="robot_name" value="$(arg kinova_robotName)" />   
-    <param name="robot_type" value="$(arg kinova_robotType)" />   
-    <param name="use_jaco_v1_fingers" value="$(arg use_jaco_v1_fingers)" />   
+    <param name="serial_number" value="$(arg kinova_robotSerial)" />
+    <param name="robot_name" value="$(arg kinova_robotName)" />
+    <param name="robot_type" value="$(arg kinova_robotType)" />
+    <param name="use_jaco_v1_fingers" value="$(arg use_jaco_v1_fingers)" />
   </node>
-    
+
   <group unless="$(arg use_urdf)">
     <node name="$(arg kinova_robotName)_tf_updater" pkg="kinova_driver" type="kinova_tf_updater" output="screen" cwd="node" args="$(arg kinova_robotType)">
       <remap from="/$(arg kinova_robotName)_tf_updater/in/joint_angles" to="/$(arg kinova_robotName)_driver/out/joint_angles"/>
